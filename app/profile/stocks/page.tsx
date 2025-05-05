@@ -1,3 +1,7 @@
 export default function Stocks() {
-    return <div>Stocks</div>;
+    return (
+        <div className="flex flex-col gap-4">
+            <h1>Stocks</h1>
+        </div>
+    );
 }
