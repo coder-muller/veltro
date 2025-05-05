@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Sun, Moon, User, LayoutPanelLeft, ListCollapse, ChevronUp, Settings, LineChart, WalletCards } from "lucide-react"
+import { LogOut, Sun, Moon, User, LayoutPanelLeft, ListCollapse, ChevronUp, Settings, LineChart, Landmark } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -25,7 +25,7 @@ const items = [
     {
         title: "Renda Fixa",
         url: "/profile/bonds",
-        icon: WalletCards,
+        icon: Landmark,
     },
     {
         title: "Renda Variável",
