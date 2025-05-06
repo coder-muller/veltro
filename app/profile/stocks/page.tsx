@@ -12,116 +12,24 @@ import { Plus, Search, ChevronsUp, ChevronsDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Cell, Pie, PieChart, TooltipProps } from "recharts";
-
-// const stocks = [
-//     {
-//         name: "Banco do Brasil",
-//         ticker: "BBAS3",
-//         type: "stock",
-//         buyPrice: 25.00,
-//         quantity: 135,
-//         price: 28.2,
-//     },
-//     {
-//         name: "Vale do Rio Doce",
-//         ticker: "VALE3",
-//         type: "stock",
-//         buyPrice: 43.00,
-//         quantity: 122,
-//         price: 45.00,
-//     },
-//     {
-//         name: "Petrobras",
-//         ticker: "PETR4",
-//         type: "stock",
-//         buyPrice: 32.00,
-//         quantity: 50,
-//         price: 31.00,
-//     },
-//     {
-//         name: "Maxi Renda",
-//         ticker: "MXRF11",
-//         type: "real-estate",
-//         buyPrice: 10.10,
-//         quantity: 380,
-//         price: 10.50,
-//     },
-//     {
-//         name: "Guardian Logistica",
-//         ticker: "GARE11",
-//         type: "real-estate",
-//         buyPrice: 7.79,
-//         quantity: 210,
-//         price: 9.02,
-//     },
-//     {
-//         name: "Hasdex Nasdaq Crypto",
-//         ticker: "HASH11",
-//         type: "etf",
-//         buyPrice: 58.90,
-//         quantity: 120,
-//         price: 71.21,
-//     },
-//     {
-//         name: "Banco Inter",
-//         ticker: "BIDI11",
-//         type: "stock",
-//         buyPrice: 10.00,
-//         quantity: 100,
-//         price: 10.50,
-//     },
-//     {
-//         name: "Banco Pine",
-//         ticker: "PINE4",
-//         type: "stock",
-//         buyPrice: 3.90,
-//         quantity: 100,
-//         price: 4.00,
-//     },
-// ]
-
-const stocks = [
-    {
-        name: "Banco do Brasil",
-        ticker: "BBAS3",
-        type: "stock",
-        buyPrice: 23.72,
-        quantity: 50,
-        price: 28.2,
-    },
-    {
-        name: "Banco do Brasil",
-        ticker: "BBAS3",
-        type: "stock",
-        buyPrice: 25.00,
-        quantity: 100,
-        price: 28.2,
-    },
-    {
-        name: "Banco do Brasil",
-        ticker: "BBAS3",
-        type: "stock",
-        buyPrice: 26.30,
-        quantity: 22,
-        price: 28.2,
-    },
-    {
-        name: "Maxi Renda",
-        ticker: "BBAS3",
-        type: "stock",
-        buyPrice: 26.30,
-        quantity: 22,
-        price: 28.2,
-    },
-]
+import { Stock } from "@/lib/types";
+import axios from "axios";
+import { getMe } from "@/lib/getMe";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Stocks() {
 
+    const router = useRouter();
+
     const [isFetching, setIsFetching] = useState<boolean>(true);
+    const [stocks, setStocks] = useState<Stock[]>([]);
 
     const [chartType, setChartType] = useState<string>("by-asset");
     const [search, setSearch] = useState<string>("");
     const [typeSearch, setTypeSearch] = useState<string>("all");
+
     const [consolidateStocks, setConsolidateStocks] = useState<boolean>(true);
 
     const [portfolioValue, setPortfolioValue] = useState<number>(0);
@@ -129,34 +37,61 @@ export default function Stocks() {
     const [totalProfit, setTotalProfit] = useState<number>(0);
     const [totalProfitPercentage, setTotalProfitPercentage] = useState<number>(0);
 
+    const fetchStocks = async () => {
+        setIsFetching(true)
+
+        const me = await getMe();
+
+        if (!me) {
+            toast.error("Unauthorized");
+            router.push("/auth/login");
+            setIsFetching(false);
+            return;
+        }
+
+        try {
+            const response = await axios.get(`/api/stocks/${me.userId}`);
+            setStocks(response.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsFetching(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchStocks();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Function to consolidate stocks with the same ticker
     const getConsolidatedStocks = () => {
         const consolidatedMap = new Map();
-        
+
         stocks.forEach(stock => {
             if (consolidatedMap.has(stock.ticker)) {
                 const existing = consolidatedMap.get(stock.ticker);
-                
+
                 // Sum up quantities
                 const newQuantity = existing.quantity + stock.quantity;
-                
+
                 // Calculate weighted average buy price
-                const newBuyPrice = 
+                const newBuyPrice =
                     ((existing.buyPrice * existing.quantity) + (stock.buyPrice * stock.quantity)) / newQuantity;
-                
+
                 consolidatedMap.set(stock.ticker, {
                     ...existing,
                     quantity: newQuantity,
                     buyPrice: newBuyPrice,
                 });
             } else {
-                consolidatedMap.set(stock.ticker, {...stock});
+                consolidatedMap.set(stock.ticker, { ...stock });
             }
         });
-        
+
         return Array.from(consolidatedMap.values());
     };
-    
+
     // Get stocks based on consolidation preference
     const getStocksToUse = () => {
         if (consolidateStocks) {
@@ -166,24 +101,17 @@ export default function Stocks() {
     };
 
     useEffect(() => {
-        setIsFetching(true);
-        setTimeout(() => {
-            setIsFetching(false);
-        }, 1000);
-    }, []);
-
-    useEffect(() => {
         const stocksToUse = getStocksToUse();
         const filteredStocks = stocksToUse.filter(
-            (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || 
-                       stock.name.toLowerCase().includes(search.toLowerCase()))
-                       .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
+            (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
+                stock.name.toLowerCase().includes(search.toLowerCase()))
+            .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
 
         const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
         const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
         const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
         const totalProfitPercentage = (totalProfit / portfolioValue);
-        
+
         setPortfolioValue(portfolioValue);
         setCurrentValue(currentValue);
         setTotalProfit(totalProfit);
@@ -194,7 +122,7 @@ export default function Stocks() {
     // Prepare chart data based on chartType and filtering
     const getChartData = () => {
         const stocksToUse = getStocksToUse();
-        
+
         // Apply the same filters as elsewhere in the component
         const filteredStocks = stocksToUse.filter((stock) =>
             stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
@@ -232,25 +160,21 @@ export default function Stocks() {
         }
     };
 
-    // Chart colors based on globals.css CSS variables
     const chartColors = {
         "stock": "var(--chart-1)",
         "real-estate": "var(--chart-2)",
         "etf": "var(--chart-3)"
     };
 
-    // Chart configuration
     const chartConfig = {
         "stock": { label: "Ações" },
         "real-estate": { label: "FIIs" },
         "etf": { label: "ETFs" }
     };
 
-    // Calculate total portfolio value for percentage calculation
     const totalPortfolioValue = getStocksToUse().reduce((total, stock) =>
         total + calculateStock(stock).currentValue, 0);
 
-    // Custom tooltip component for the pie chart
     const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
         if (active && payload && payload.length > 0) {
             const data = payload[0].payload;
@@ -288,12 +212,6 @@ export default function Stocks() {
                             <SelectItem value="real-estate">FIIs</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button 
-                        variant={consolidateStocks ? "default" : "outline"} 
-                        onClick={() => setConsolidateStocks(!consolidateStocks)}
-                    >
-                        Consolidar
-                    </Button>
                     <Button variant="default">
                         <Plus />
                         Adicionar
@@ -375,8 +293,22 @@ export default function Stocks() {
                     </CardContent>
                 </Card>
                 <Card className="w-full h-max col-span-1 md:col-span-2">
-                    <CardHeader>
+                    <CardHeader className="flex items-center justify-between">
                         <CardTitle>Ativos</CardTitle>
+                        <Tooltip delayDuration={500}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant={consolidateStocks ? "default" : "ghost"}
+                                    onClick={() => setConsolidateStocks(!consolidateStocks)}
+                                    size="sm"
+                                >
+                                    Consolidar
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
+                            </TooltipContent>
+                        </Tooltip>
                     </CardHeader>
                     <CardContent>
                         <div className="w-full flex flex-col gap-2 items-center justify-center">
@@ -404,7 +336,7 @@ export default function Stocks() {
                                             </div>
                                             <div className="w-full flex flex-col items-center justify-center">
                                                 <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                                                <Label className="text-sm font-bold">{formatCurrency(calculateStock(stock).totalProfit)} | {formatPercentage(calculateStock(stock).totalProfitPercentage)}</Label>
+                                                <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
                                             </div>
                                         </div>
                                     </div>
