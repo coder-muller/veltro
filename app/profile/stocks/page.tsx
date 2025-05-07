@@ -37,6 +37,8 @@ export default function Stocks() {
     const [totalProfit, setTotalProfit] = useState<number>(0);
     const [totalProfitPercentage, setTotalProfitPercentage] = useState<number>(0);
 
+    const [listData, setListData] = useState<{ name: string, value: number, type: string }[]>([]);
+
     const fetchStocks = async () => {
         setIsFetching(true)
 
@@ -112,15 +114,19 @@ export default function Stocks() {
         const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
         const totalProfitPercentage = (totalProfit / portfolioValue);
 
+        const chartData = getChartData();
+
+        setListData(chartData);
         setPortfolioValue(portfolioValue);
         setCurrentValue(currentValue);
         setTotalProfit(totalProfit);
         setTotalProfitPercentage(totalProfitPercentage);
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stocks, search, typeSearch, consolidateStocks]);
 
     // Prepare chart data based on chartType and filtering
-    const getChartData = () => {
+    const getChartData = (): { name: string, value: number, type: string }[] => {
         const stocksToUse = getStocksToUse();
 
         // Apply the same filters as elsewhere in the component
@@ -275,7 +281,7 @@ export default function Stocks() {
                                     </ChartContainer>
                                 </div>
                                 <div className="w-full flex flex-col items-center justify-center gap-2">
-                                    {getChartData()
+                                    {listData
                                         .sort((a, b) => b.value - a.value)
                                         .map((entry) => (
                                             <div key={entry.name} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">

@@ -15,6 +15,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { getMe } from "@/lib/getMe";
 
 const items = [
     {
@@ -44,8 +48,37 @@ export function AppSidebar() {
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
 
-    async function logout() {
-        router.push("/");
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [userName, setUserName] = useState("");
+
+    useEffect(() => {
+        getUserName();
+        setIsLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    async function getUserName() {
+        try {
+            const user = await getMe();
+            if (user && user.userName) {
+                setUserName(user.userName);
+            }
+        } catch (error) {
+            console.error(error);
+            router.push("/auth/login");
+            toast.error("Erro ao obter o nome do usuário");
+        }
+    }
+
+    async function hendleLogout() {
+        try {
+            await axios.delete("/api/auth");
+            router.push("/auth/login");
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao fazer logout");
+        }
     }
 
     return (
@@ -72,7 +105,7 @@ export function AppSidebar() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton>
-                            <User /> Usuário
+                            <User /> {isLoading ? "Carregando..." : userName}
                             <ChevronUp className="ml-auto" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
@@ -85,7 +118,7 @@ export function AppSidebar() {
                         }}>
                             {theme === "dark" ? <Sun /> : <Moon />} Alterar tema
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { logout(); }}>
+                        <DropdownMenuItem onClick={() => { hendleLogout(); }}>
                             <LogOut /> Sair
                         </DropdownMenuItem>
                     </DropdownMenuContent>
