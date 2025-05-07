@@ -75,7 +75,7 @@ export default function Stocks() {
 
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
 
-    const [processedChartData, setProcessedChartData] = useState<Array<{name: string, value: number, type: string}>>([]);
+    const [processedChartData, setProcessedChartData] = useState<Array<{ name: string, value: number, type: string }>>([]);
     const [wallets, setWallets] = useState<Wallet[]>([]);
 
     const [processedStockCount, setProcessedStockCount] = useState<number>(0);
@@ -144,7 +144,7 @@ export default function Stocks() {
                     price: currentPrice,
                 });
             } else {
-                consolidatedMap.set(key, { 
+                consolidatedMap.set(key, {
                     ...stock,
                     price: currentPrice
                 });
@@ -159,7 +159,7 @@ export default function Stocks() {
         if (consolidateStocks) {
             return await getConsolidatedStocks();
         }
-        
+
         const updatedStocks = [...stocks];
         for (let i = 0; i < updatedStocks.length; i++) {
             try {
@@ -172,7 +172,7 @@ export default function Stocks() {
                 console.error(`Erro ao buscar preço para ${updatedStocks[i].ticker}:`, error);
             }
         }
-        
+
         return updatedStocks;
     };
 
@@ -183,28 +183,28 @@ export default function Stocks() {
     const processStockData = async () => {
         try {
             const stocksToUse = await getStocksToUse();
-            
+
             // Filtrar os stocks com base na pesquisa e tipo
             const filteredStocks = stocksToUse.filter(
                 (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
                     stock.name.toLowerCase().includes(search.toLowerCase()))
                 .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
-            
+
             setProcessedStocks(filteredStocks);
             setProcessedStockCount(filteredStocks.length);
-            
+
             // Calcular valores do portfólio
             const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
             const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
             const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
             const totalProfitPercentage = (totalProfit / portfolioValue);
-            
+
             // Atualizar estados
             setPortfolioValue(portfolioValue);
             setCurrentValue(currentValue);
             setTotalProfit(totalProfit);
             setTotalProfitPercentage(totalProfitPercentage);
-            
+
             // Gerar e atualizar dados do gráfico
             const chartData = await generateChartData(filteredStocks);
             setProcessedChartData(chartData);
@@ -230,7 +230,7 @@ export default function Stocks() {
     }, [stocks, search, typeSearch, consolidateStocks, chartType]);
 
     // Prepare chart data based on chartType and filtering
-    const generateChartData = async (filteredStocks: Stock[]): Promise<{name: string, value: number, type: string}[]> => {
+    const generateChartData = async (filteredStocks: Stock[]): Promise<{ name: string, value: number, type: string }[]> => {
         if (chartType === "by-asset") {
             return filteredStocks.map(stock => ({
                 name: stock.ticker,
@@ -241,20 +241,20 @@ export default function Stocks() {
         } else if (chartType === "by-wallet") {
             // Group by wallet
             const walletGroups: Record<string, { value: number, name: string, type: string }> = {};
-            
+
             filteredStocks.forEach(stock => {
                 const value = calculateStock(stock).currentValue;
                 const walletId = stock.walletId;
-                
+
                 // Find wallet name in wallets array
                 const wallet = wallets.find(w => w.id === walletId);
                 const walletName = wallet?.name || "Carteira Desconhecida";
-                
+
                 if (walletGroups[walletId]) {
                     walletGroups[walletId].value += value;
                 } else {
-                    walletGroups[walletId] = { 
-                        value, 
+                    walletGroups[walletId] = {
+                        value,
                         name: walletName,
                         type: `wallet-${walletId}` // usando como identificador único
                     };
@@ -304,7 +304,7 @@ export default function Stocks() {
     };
 
     // Valor total do portfólio calculado a partir dos dados processados
-    const totalPortfolioValue = processedStocks.reduce((total, stock) => 
+    const totalPortfolioValue = processedStocks.reduce((total, stock) =>
         total + calculateStock(stock).currentValue, 0);
 
     const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
@@ -365,7 +365,7 @@ export default function Stocks() {
     // Função para renderizar a lista de ativos
     const renderStocksList = () => {
         if (isFetching) return <Skeleton className="w-full h-24" />;
-        
+
         return processedStocks
             .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
             .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
@@ -546,21 +546,24 @@ export default function Stocks() {
                         </Card>
                         <Card className="w-full h-max col-span-1 md:col-span-2">
                             <CardHeader className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">Ativos {<span className="text-xs text-muted-foreground">Cotação de {new Date(hourPrice).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}</CardTitle>
-                                <Tooltip delayDuration={500}>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={consolidateStocks ? "default" : "ghost"}
-                                            onClick={() => setConsolidateStocks(!consolidateStocks)}
-                                            size="sm"
-                                        >
-                                            Consolidar
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
-                                    </TooltipContent>
-                                </Tooltip>
+                                <CardTitle className="flex items-center gap-2">Ativos</CardTitle>
+                                <div className="flex items-center gap-2">
+                                    {hourPrice && <span className="text-xs text-muted-foreground">Cotações atualizadas dia {new Date(hourPrice).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    <Tooltip delayDuration={500}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant={consolidateStocks ? "default" : "ghost"}
+                                                onClick={() => setConsolidateStocks(!consolidateStocks)}
+                                                size="sm"
+                                            >
+                                                Consolidar
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="w-full flex flex-col gap-2 items-center justify-center">

@@ -1,6 +1,8 @@
+const API_KEY = process.env.NEXT_PUBLIC_BRAPI_API_KEY;
+
 export const getCurrentPrice = async (ticker: string) => {
     try {
-        const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=vpZaARCJupnabbnfh2icp4`);
+        const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${API_KEY}`);
         const data = await response.json();
 
         if (!data || !data.results || data.results.length === 0) {
@@ -16,7 +18,7 @@ export const getCurrentPrice = async (ticker: string) => {
 
 export const getCurrentHourPrice = async (): Promise<string> => {
     try {
-        const response = await fetch(`https://brapi.dev/api/quote/BBAS3?token=vpZaARCJupnabbnfh2icp4`);
+        const response = await fetch(`https://brapi.dev/api/quote/BBAS3?token=${API_KEY}`);
         const data = await response.json();
 
         if (!data || !data.results || data.results.length === 0) {
