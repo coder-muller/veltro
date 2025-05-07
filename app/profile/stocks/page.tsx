@@ -23,7 +23,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormItem, FormField, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
-import { getCurrentPrice } from "@/lib/getCurrentPrice";
+import { getCurrentHourPrice, getCurrentPrice } from "@/lib/getCurrentPrice";
 
 
 const newStockSchema = z.object({
@@ -79,6 +79,7 @@ export default function Stocks() {
     const [wallets, setWallets] = useState<Wallet[]>([]);
 
     const [processedStockCount, setProcessedStockCount] = useState<number>(0);
+    const [hourPrice, setHourPrice] = useState<string>("");
 
     const fetchStocks = async () => {
         setIsFetching(true)
@@ -140,7 +141,7 @@ export default function Stocks() {
                     ...existing,
                     quantity: newQuantity,
                     buyPrice: newBuyPrice,
-                    currentPrice: currentPrice,
+                    price: currentPrice,
                 });
             } else {
                 consolidatedMap.set(key, { 
@@ -158,7 +159,21 @@ export default function Stocks() {
         if (consolidateStocks) {
             return await getConsolidatedStocks();
         }
-        return stocks;
+        
+        const updatedStocks = [...stocks];
+        for (let i = 0; i < updatedStocks.length; i++) {
+            try {
+                const currentPrice = await getCurrentPrice(updatedStocks[i].ticker);
+                updatedStocks[i] = {
+                    ...updatedStocks[i],
+                    price: currentPrice
+                };
+            } catch (error) {
+                console.error(`Erro ao buscar preço para ${updatedStocks[i].ticker}:`, error);
+            }
+        }
+        
+        return updatedStocks;
     };
 
     // Estado para armazenar os dados processados
@@ -193,6 +208,9 @@ export default function Stocks() {
             // Gerar e atualizar dados do gráfico
             const chartData = await generateChartData(filteredStocks);
             setProcessedChartData(chartData);
+
+            const hourPrice = await getCurrentHourPrice();
+            setHourPrice(hourPrice);
         } catch (error) {
             console.error("Erro ao processar dados:", error);
             // Definir valores padrão em caso de erro
@@ -528,7 +546,7 @@ export default function Stocks() {
                         </Card>
                         <Card className="w-full h-max col-span-1 md:col-span-2">
                             <CardHeader className="flex items-center justify-between">
-                                <CardTitle>Ativos</CardTitle>
+                                <CardTitle className="flex items-center gap-2">Ativos {<span className="text-xs text-muted-foreground">Cotação de {new Date(hourPrice).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}</CardTitle>
                                 <Tooltip delayDuration={500}>
                                     <TooltipTrigger asChild>
                                         <Button
