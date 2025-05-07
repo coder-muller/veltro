@@ -23,6 +23,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormItem, FormField, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
+import { getCurrentPrice } from "@/lib/getCurrentPrice";
+
 
 const newStockSchema = z.object({
     ticker: z.string().min(1, { message: "Ticker é obrigatório" }),
@@ -73,8 +75,10 @@ export default function Stocks() {
 
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
 
-    const [listData, setListData] = useState<{ name: string, value: number, type: string }[]>([]);
+    const [processedChartData, setProcessedChartData] = useState<Array<{name: string, value: number, type: string}>>([]);
     const [wallets, setWallets] = useState<Wallet[]>([]);
+
+    const [processedStockCount, setProcessedStockCount] = useState<number>(0);
 
     const fetchStocks = async () => {
         setIsFetching(true)
@@ -117,80 +121,132 @@ export default function Stocks() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Function to consolidate stocks with the same ticker
-    const getConsolidatedStocks = () => {
+    const getConsolidatedStocks = async () => {
         const consolidatedMap = new Map();
 
-        stocks.forEach(stock => {
-            if (consolidatedMap.has(stock.ticker)) {
-                const existing = consolidatedMap.get(stock.ticker);
+        for (const stock of stocks) {
+            const key = `${stock.ticker}-${stock.walletId}`;
+            const currentPrice = await getCurrentPrice(stock.ticker);
 
-                // Sum up quantities
+            if (consolidatedMap.has(key)) {
+                const existing = consolidatedMap.get(key);
+
                 const newQuantity = existing.quantity + stock.quantity;
 
-                // Calculate weighted average buy price
                 const newBuyPrice =
                     ((existing.buyPrice * existing.quantity) + (stock.buyPrice * stock.quantity)) / newQuantity;
 
-                consolidatedMap.set(stock.ticker, {
+                consolidatedMap.set(key, {
                     ...existing,
                     quantity: newQuantity,
                     buyPrice: newBuyPrice,
+                    currentPrice: currentPrice,
                 });
             } else {
-                consolidatedMap.set(stock.ticker, { ...stock });
+                consolidatedMap.set(key, { 
+                    ...stock,
+                    price: currentPrice
+                });
             }
-        });
+        }
 
         return Array.from(consolidatedMap.values());
     };
 
     // Get stocks based on consolidation preference
-    const getStocksToUse = () => {
+    const getStocksToUse = async (): Promise<Stock[]> => {
         if (consolidateStocks) {
-            return getConsolidatedStocks();
+            return await getConsolidatedStocks();
         }
         return stocks;
     };
 
+    // Estado para armazenar os dados processados
+    const [processedStocks, setProcessedStocks] = useState<Stock[]>([]);
+
+    // Função para processar os dados de stocks
+    const processStockData = async () => {
+        try {
+            const stocksToUse = await getStocksToUse();
+            
+            // Filtrar os stocks com base na pesquisa e tipo
+            const filteredStocks = stocksToUse.filter(
+                (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
+                    stock.name.toLowerCase().includes(search.toLowerCase()))
+                .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
+            
+            setProcessedStocks(filteredStocks);
+            setProcessedStockCount(filteredStocks.length);
+            
+            // Calcular valores do portfólio
+            const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
+            const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
+            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
+            const totalProfitPercentage = (totalProfit / portfolioValue);
+            
+            // Atualizar estados
+            setPortfolioValue(portfolioValue);
+            setCurrentValue(currentValue);
+            setTotalProfit(totalProfit);
+            setTotalProfitPercentage(totalProfitPercentage);
+            
+            // Gerar e atualizar dados do gráfico
+            const chartData = await generateChartData(filteredStocks);
+            setProcessedChartData(chartData);
+        } catch (error) {
+            console.error("Erro ao processar dados:", error);
+            // Definir valores padrão em caso de erro
+            setProcessedStocks([]);
+            setProcessedStockCount(0);
+            setPortfolioValue(0);
+            setCurrentValue(0);
+            setTotalProfit(0);
+            setTotalProfitPercentage(0);
+            setProcessedChartData([]);
+        }
+    };
+
     useEffect(() => {
-        const stocksToUse = getStocksToUse();
-        const filteredStocks = stocksToUse.filter(
-            (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
-                stock.name.toLowerCase().includes(search.toLowerCase()))
-            .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
-
-        const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
-        const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
-        const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
-        const totalProfitPercentage = (totalProfit / portfolioValue);
-
-        const chartData = getChartData();
-
-        setListData(chartData);
-        setPortfolioValue(portfolioValue);
-        setCurrentValue(currentValue);
-        setTotalProfit(totalProfit);
-        setTotalProfitPercentage(totalProfitPercentage);
-
+        processStockData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stocks, search, typeSearch, consolidateStocks]);
+    }, [stocks, search, typeSearch, consolidateStocks, chartType]);
 
     // Prepare chart data based on chartType and filtering
-    const getChartData = (): { name: string, value: number, type: string }[] => {
-        const stocksToUse = getStocksToUse();
-
-        // Apply the same filters as elsewhere in the component
-        const filteredStocks = stocksToUse.filter((stock) =>
-            stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
-            stock.name.toLowerCase().includes(search.toLowerCase()))
-            .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
-
+    const generateChartData = async (filteredStocks: Stock[]): Promise<{name: string, value: number, type: string}[]> => {
         if (chartType === "by-asset") {
             return filteredStocks.map(stock => ({
                 name: stock.ticker,
                 value: calculateStock(stock).currentValue,
-                type: stock.type
+                type: stock.type,
+                walletId: stock.walletId
+            }));
+        } else if (chartType === "by-wallet") {
+            // Group by wallet
+            const walletGroups: Record<string, { value: number, name: string, type: string }> = {};
+            
+            filteredStocks.forEach(stock => {
+                const value = calculateStock(stock).currentValue;
+                const walletId = stock.walletId;
+                
+                // Find wallet name in wallets array
+                const wallet = wallets.find(w => w.id === walletId);
+                const walletName = wallet?.name || "Carteira Desconhecida";
+                
+                if (walletGroups[walletId]) {
+                    walletGroups[walletId].value += value;
+                } else {
+                    walletGroups[walletId] = { 
+                        value, 
+                        name: walletName,
+                        type: `wallet-${walletId}` // usando como identificador único
+                    };
+                }
+            });
+
+            return Object.values(walletGroups).map(({ name, value, type }) => ({
+                name,
+                value,
+                type
             }));
         } else {
             // Group by type
@@ -229,7 +285,8 @@ export default function Stocks() {
         "etf": { label: "ETFs" }
     };
 
-    const totalPortfolioValue = getStocksToUse().reduce((total, stock) =>
+    // Valor total do portfólio calculado a partir dos dados processados
+    const totalPortfolioValue = processedStocks.reduce((total, stock) => 
         total + calculateStock(stock).currentValue, 0);
 
     const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
@@ -266,7 +323,15 @@ export default function Stocks() {
             if (response.status === 201) {
                 fetchStocks();
                 setIsDialogOpen(false);
-                form.reset();
+                form.reset({
+                    ticker: "",
+                    name: "",
+                    walletId: "",
+                    type: "",
+                    quantity: "",
+                    buyPrice: "",
+                    buyDate: new Date().toISOString().split('T')[0],
+                });
                 toast.success("Ativo adicionado com sucesso");
             } else {
                 toast.error("Erro ao adicionar ativo");
@@ -278,6 +343,41 @@ export default function Stocks() {
             setIsLoading(false);
         }
     }
+
+    // Função para renderizar a lista de ativos
+    const renderStocksList = () => {
+        if (isFetching) return <Skeleton className="w-full h-24" />;
+        
+        return processedStocks
+            .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
+            .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
+            .map((stock) => (
+                <div key={`${stock.ticker}-${stock.walletId}`} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
+                    <div className="w-full flex items-center justify-between">
+                        <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
+                        <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
+                    </div>
+                    <div className="w-full grid grid-cols-4 gap-2">
+                        <div className="w-full flex flex-col items-center justify-center">
+                            <Label className="text-xs text-muted-foreground">Preço Médio</Label>
+                            <Label className="text-sm font-bold">{formatCurrency(stock.buyPrice)}</Label>
+                        </div>
+                        <div className="w-full flex flex-col items-center justify-center">
+                            <Label className="text-xs text-muted-foreground">Cotação Atual</Label>
+                            <Label className="text-sm font-bold">{formatCurrency(stock.price)}</Label>
+                        </div>
+                        <div className="w-full flex flex-col items-center justify-center">
+                            <Label className="text-xs text-muted-foreground">Quantidade</Label>
+                            <Label className="text-sm font-bold">{stock.quantity}</Label>
+                        </div>
+                        <div className="w-full flex flex-col items-center justify-center">
+                            <Label className="text-xs text-muted-foreground">Rendimento</Label>
+                            <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
+                        </div>
+                    </div>
+                </div>
+            ));
+    };
 
     return (
         <div className="w-full flex flex-col gap-4">
@@ -316,7 +416,7 @@ export default function Stocks() {
                     </Button>
                 </div>
             </div>
-            {getStocksToUse().length > 0 ? (
+            {processedStockCount > 0 ? (
                 <>
                     <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
@@ -345,6 +445,7 @@ export default function Stocks() {
                                     <SelectContent>
                                         <SelectItem value="by-asset">Por Ativo</SelectItem>
                                         <SelectItem value="by-type">Por Tipo</SelectItem>
+                                        <SelectItem value="by-wallet">Por Carteira</SelectItem>
                                     </SelectContent>
                                 </Select>
 
@@ -354,7 +455,7 @@ export default function Stocks() {
                                             <ChartContainer config={chartConfig} className="h-full">
                                                 <PieChart>
                                                     <Pie
-                                                        data={getChartData()}
+                                                        data={processedChartData}
                                                         cx="50%"
                                                         cy="50%"
                                                         labelLine={false}
@@ -363,10 +464,12 @@ export default function Stocks() {
                                                         dataKey="value"
                                                         nameKey="name"
                                                     >
-                                                        {getChartData().map((entry, index) => {
+                                                        {processedChartData.map((entry, index) => {
                                                             const color = chartType === "by-type"
                                                                 ? chartColors[entry.type as keyof typeof chartColors]
-                                                                : `var(--chart-${(index % 15) + 1})`;
+                                                                : chartType === "by-wallet"
+                                                                    ? `var(--chart-${(index % 15) + 4})` // Usando cores diferentes para carteiras
+                                                                    : `var(--chart-${(index % 15) + 1})`;
                                                             return <Cell key={`cell-${index}`} fill={color} />;
                                                         })}
                                                     </Pie>
@@ -375,24 +478,45 @@ export default function Stocks() {
                                             </ChartContainer>
                                         </div>
                                         <div className="w-full flex flex-col items-center justify-center gap-2">
-                                            {listData
-                                                .filter((entry, index, self) =>
-                                                    index === self.findIndex((t) => t.name === entry.name)
-                                                )
-                                                .map((entry, index) => {
-                                                    const color = chartType === "by-type"
-                                                        ? chartColors[entry.type as keyof typeof chartColors]
-                                                        : `var(--chart-${(index % 15) + 1})`;
-                                                    return (
-                                                        <div key={`${entry.name}-${index}`} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
-                                                            <Label className="text-sm font-bold flex items-center gap-2">
-                                                                <div className="size-3 rounded-full" style={{ backgroundColor: color }} />
-                                                                {entry.name}
-                                                            </Label>
-                                                            <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
-                                                        </div>
-                                                    );
-                                                })}
+                                            {chartType === "by-wallet" ? (
+                                                // Modo de visualização por carteira
+                                                processedChartData
+                                                    .filter((entry, index, self) =>
+                                                        index === self.findIndex((t) => t.name === entry.name)
+                                                    )
+                                                    .map((entry, index) => {
+                                                        const color = `var(--chart-${(index % 15) + 4})`; // Cores para carteiras
+                                                        return (
+                                                            <div key={`${entry.name}-${index}`} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                                                                <Label className="text-sm font-bold flex items-center gap-2">
+                                                                    <div className="size-3 rounded-full" style={{ backgroundColor: color }} />
+                                                                    {entry.name} {/* Nome da carteira */}
+                                                                </Label>
+                                                                <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
+                                                            </div>
+                                                        );
+                                                    })
+                                            ) : (
+                                                // Modos de visualização por ativo e por tipo
+                                                processedChartData
+                                                    .filter((entry, index, self) =>
+                                                        index === self.findIndex((t) => t.name === entry.name)
+                                                    )
+                                                    .map((entry, index) => {
+                                                        const color = chartType === "by-type"
+                                                            ? chartColors[entry.type as keyof typeof chartColors]
+                                                            : `var(--chart-${(index % 15) + 1})`;
+                                                        return (
+                                                            <div key={`${entry.name}-${index}`} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                                                                <Label className="text-sm font-bold flex items-center gap-2">
+                                                                    <div className="size-3 rounded-full" style={{ backgroundColor: color }} />
+                                                                    {entry.name}
+                                                                </Label>
+                                                                <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
+                                                            </div>
+                                                        );
+                                                    })
+                                            )}
                                         </div>
                                     </>
                                 ) : (
@@ -422,35 +546,7 @@ export default function Stocks() {
                             </CardHeader>
                             <CardContent>
                                 <div className="w-full flex flex-col gap-2 items-center justify-center">
-                                    {isFetching ? <Skeleton className="w-full h-24" /> : getStocksToUse()
-                                        .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
-                                        .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
-                                        .map((stock) => (
-                                            <div key={stock.ticker} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
-                                                <div className="w-full flex items-center justify-between">
-                                                    <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
-                                                    <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
-                                                </div>
-                                                <div className="w-full grid grid-cols-4 gap-2">
-                                                    <div className="w-full flex flex-col items-center justify-center">
-                                                        <Label className="text-xs text-muted-foreground">Preço Médio</Label>
-                                                        <Label className="text-sm font-bold">{formatCurrency(stock.buyPrice)}</Label>
-                                                    </div>
-                                                    <div className="w-full flex flex-col items-center justify-center">
-                                                        <Label className="text-xs text-muted-foreground">Cotação Atual</Label>
-                                                        <Label className="text-sm font-bold">{formatCurrency(stock.price)}</Label>
-                                                    </div>
-                                                    <div className="w-full flex flex-col items-center justify-center">
-                                                        <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                                                        <Label className="text-sm font-bold">{stock.quantity}</Label>
-                                                    </div>
-                                                    <div className="w-full flex flex-col items-center justify-center">
-                                                        <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                                                        <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    {renderStocksList()}
                                 </div>
                             </CardContent>
                         </Card>

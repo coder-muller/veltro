@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
+import { useEffect } from "react";
 const formSchema = z.object({
     email: z.string().email({ message: "Invalid email" }),
     password: z.string().min(1, { message: "Password is required" }),
@@ -28,6 +29,18 @@ export default function Login() {
             password: "",
         },
     });
+
+    useEffect(() => {
+        const me = async () => {
+            const response: AxiosResponse<{ message: string }> = await axios.get("/api/auth/me");
+
+            if (response.status === 200) {
+                router.push("/profile/stocks");
+            }
+        }
+
+        me();
+    }, [router]);
 
     const handleLogin = async (data: z.infer<typeof formSchema>) => {
         try {
