@@ -38,12 +38,15 @@ model Wallet {
 model Stock {
   id String @id @default(uuid())
 
-  name     String
-  ticker   String
-  type     String
-  buyPrice Float
-  quantity Float
-  price    Float
+  name      String
+  ticker    String
+  type      String
+  buyPrice  Float
+  quantity  Float
+  price     Float
+  buyDate   DateTime
+  sellDate  DateTime?
+  sellPrice Float?
 
   dividends Dividend[]
 

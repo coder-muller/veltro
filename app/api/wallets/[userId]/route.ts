@@ -5,17 +5,6 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
-
-    const schema = z.object({
-        userId: z.string(),
-    });
-
-    const { success } = schema.safeParse(params);
-
-    if (!success) {
-        return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
-
     const { userId } = params;
 
     const cookieStore = await cookies();

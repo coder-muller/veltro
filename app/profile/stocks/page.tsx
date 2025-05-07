@@ -8,22 +8,56 @@ import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentage } from "@/lib/format";
 import { calculateStock } from "@/lib/stocksCalculations";
-import { Plus, Search, ChevronsUp, ChevronsDown } from "lucide-react";
+import { Plus, Search, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Cell, Pie, PieChart, TooltipProps } from "recharts";
-import { Stock } from "@/lib/types";
+import { Stock, Wallet } from "@/lib/types";
 import axios from "axios";
 import { getMe } from "@/lib/getMe";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormItem, FormField, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
+
+const newStockSchema = z.object({
+    ticker: z.string().min(1, { message: "Ticker é obrigatório" }),
+    name: z.string().min(1, { message: "Nome é obrigatório" }),
+    walletId: z.string().min(1, { message: "Carteira é obrigatório" }),
+    type: z.string().min(1, { message: "Tipo é obrigatório" }),
+    quantity: z.string().min(1, { message: "Quantidade é obrigatório" }).refine((value) => {
+        const number = Number(value.replace(",", "."));
+        return !isNaN(number) && number > 0;
+    }, { message: "Quantidade deve ser um número positivo" }),
+    buyPrice: z.string().min(1, { message: "Preço de compra é obrigatório" }).refine((value) => {
+        const number = Number(value.replace(",", "."));
+        return !isNaN(number) && number > 0;
+    }, { message: "Preço de compra deve ser um número positivo" }),
+    buyDate: z.string().min(1, { message: "Data de compra é obrigatório" }),
+})
 
 export default function Stocks() {
+
+    const form = useForm<z.infer<typeof newStockSchema>>({
+        resolver: zodResolver(newStockSchema),
+        defaultValues: {
+            ticker: "",
+            name: "",
+            walletId: "",
+            type: "",
+            quantity: "",
+            buyPrice: "",
+        }
+    })
 
     const router = useRouter();
 
     const [isFetching, setIsFetching] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [stocks, setStocks] = useState<Stock[]>([]);
 
     const [chartType, setChartType] = useState<string>("by-asset");
@@ -37,7 +71,10 @@ export default function Stocks() {
     const [totalProfit, setTotalProfit] = useState<number>(0);
     const [totalProfitPercentage, setTotalProfitPercentage] = useState<number>(0);
 
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
+
     const [listData, setListData] = useState<{ name: string, value: number, type: string }[]>([]);
+    const [wallets, setWallets] = useState<Wallet[]>([]);
 
     const fetchStocks = async () => {
         setIsFetching(true)
@@ -61,8 +98,22 @@ export default function Stocks() {
         }
     }
 
+    const fetchWallets = async () => {
+        const me = await getMe();
+        if (!me) {
+            return;
+        }
+
+        try {
+            const response = await axios.get(`/api/wallets/${me.userId}`);
+            setWallets(response.data);
+        } catch (error) {
+            console.error(error);
+        }
+    }
     useEffect(() => {
         fetchStocks();
+        fetchWallets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -198,6 +249,36 @@ export default function Stocks() {
         return null;
     };
 
+    const onSubmit = async (data: z.infer<typeof newStockSchema>) => {
+        setIsLoading(true);
+        try {
+
+            const me = await getMe();
+
+            if (!me) {
+                toast.error("Unauthorized");
+                router.push("/auth/login");
+                return;
+            }
+
+            const response = await axios.post(`/api/stocks/${me.userId}`, data);
+
+            if (response.status === 201) {
+                fetchStocks();
+                setIsDialogOpen(false);
+                form.reset();
+                toast.success("Ativo adicionado com sucesso");
+            } else {
+                toast.error("Erro ao adicionar ativo");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao adicionar ativo");
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="w-full flex flex-col gap-4">
             <div className="w-full flex items-center justify-between">
@@ -218,139 +299,314 @@ export default function Stocks() {
                             <SelectItem value="real-estate">FIIs</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="default">
+                    <Button variant="default" onClick={() => {
+                        form.reset({
+                            ticker: "",
+                            name: "",
+                            walletId: "",
+                            type: "",
+                            quantity: "",
+                            buyPrice: "",
+                            buyDate: new Date().toISOString().split('T')[0],
+                        });
+                        setIsDialogOpen(true);
+                    }}>
                         <Plus />
                         Adicionar
                     </Button>
                 </div>
             </div>
-            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
-                    <Label className="text-sm font-medium">Valor Investido</Label>
-                    {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold">{formatCurrency(portfolioValue)}</Label>}
-                </div>
-                <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
-                    <Label className="text-sm font-medium">Posição Atual</Label>
-                    {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold">{formatCurrency(currentValue)}</Label>}
-                </div>
-                <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
-                    <Label className="text-sm font-medium">Rendimento</Label>
-                    {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(totalProfitPercentage)})</span>}</Label>}
-                </div>
-            </div>
-            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
-                <Card className="w-full h-max">
-                    <CardHeader>
-                        <CardTitle>Grafico de Composição da Carteira</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Select value={chartType} onValueChange={setChartType}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecione um método" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="by-asset">Por Ativo</SelectItem>
-                                <SelectItem value="by-type">Por Tipo</SelectItem>
-                            </SelectContent>
-                        </Select>
+            {getStocksToUse().length > 0 ? (
+                <>
+                    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                            <Label className="text-sm font-medium">Valor Investido</Label>
+                            {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold">{formatCurrency(portfolioValue)}</Label>}
+                        </div>
+                        <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                            <Label className="text-sm font-medium">Posição Atual</Label>
+                            {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold">{formatCurrency(currentValue)}</Label>}
+                        </div>
+                        <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                            <Label className="text-sm font-medium">Rendimento</Label>
+                            {isFetching ? <Skeleton className="w-24 h-4" /> : <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(totalProfitPercentage)})</span>}</Label>}
+                        </div>
+                    </div>
+                    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <Card className="w-full h-max">
+                            <CardHeader>
+                                <CardTitle>Grafico de Composição da Carteira</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Select value={chartType} onValueChange={setChartType}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Selecione um método" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="by-asset">Por Ativo</SelectItem>
+                                        <SelectItem value="by-type">Por Tipo</SelectItem>
+                                    </SelectContent>
+                                </Select>
 
-                        {!isFetching ? (
-                            <>
-                                <div className="mt-4 max-h-full">
-                                    <ChartContainer config={chartConfig} className="h-full">
-                                        <PieChart>
-                                            <Pie
-                                                data={getChartData()}
-                                                cx="50%"
-                                                cy="50%"
-                                                labelLine={false}
-                                                outerRadius={80}
-                                                fill="#8884d8"
-                                                dataKey="value"
-                                                nameKey="name"
-                                            >
-                                                {getChartData().map((entry, index) => {
+                                {!isFetching ? (
+                                    <>
+                                        <div className="mt-4 max-h-full">
+                                            <ChartContainer config={chartConfig} className="h-full">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={getChartData()}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        labelLine={false}
+                                                        outerRadius={80}
+                                                        fill="#8884d8"
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                    >
+                                                        {getChartData().map((entry, index) => {
+                                                            const color = chartType === "by-type"
+                                                                ? chartColors[entry.type as keyof typeof chartColors]
+                                                                : `var(--chart-${(index % 15) + 1})`;
+                                                            return <Cell key={`cell-${index}`} fill={color} />;
+                                                        })}
+                                                    </Pie>
+                                                    <ChartTooltip content={<CustomTooltip />} />
+                                                </PieChart>
+                                            </ChartContainer>
+                                        </div>
+                                        <div className="w-full flex flex-col items-center justify-center gap-2">
+                                            {listData
+                                                .filter((entry, index, self) =>
+                                                    index === self.findIndex((t) => t.name === entry.name)
+                                                )
+                                                .map((entry, index) => {
                                                     const color = chartType === "by-type"
                                                         ? chartColors[entry.type as keyof typeof chartColors]
                                                         : `var(--chart-${(index % 15) + 1})`;
-                                                    return <Cell key={`cell-${index}`} fill={color} />;
+                                                    return (
+                                                        <div key={`${entry.name}-${index}`} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
+                                                            <Label className="text-sm font-bold flex items-center gap-2">
+                                                                <div className="size-3 rounded-full" style={{ backgroundColor: color }} />
+                                                                {entry.name}
+                                                            </Label>
+                                                            <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
+                                                        </div>
+                                                    );
                                                 })}
-                                            </Pie>
-                                            <ChartTooltip content={<CustomTooltip />} />
-                                        </PieChart>
-                                    </ChartContainer>
-                                </div>
-                                <div className="w-full flex flex-col items-center justify-center gap-2">
-                                    {listData
-                                        .sort((a, b) => b.value - a.value)
-                                        .map((entry) => (
-                                            <div key={entry.name} className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
-                                                <Label className="text-sm font-bold">{entry.name}</Label>
-                                                <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="mt-4 h-12 flex items-center justify-center">
+                                        <Skeleton className="w-full h-full rounded-md" />
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="w-full h-max col-span-1 md:col-span-2">
+                            <CardHeader className="flex items-center justify-between">
+                                <CardTitle>Ativos</CardTitle>
+                                <Tooltip delayDuration={500}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant={consolidateStocks ? "default" : "ghost"}
+                                            onClick={() => setConsolidateStocks(!consolidateStocks)}
+                                            size="sm"
+                                        >
+                                            Consolidar
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
+                                    </TooltipContent>
+                                </Tooltip>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="w-full flex flex-col gap-2 items-center justify-center">
+                                    {isFetching ? <Skeleton className="w-full h-24" /> : getStocksToUse()
+                                        .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
+                                        .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
+                                        .map((stock) => (
+                                            <div key={stock.ticker} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
+                                                <div className="w-full flex items-center justify-between">
+                                                    <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
+                                                    <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
+                                                </div>
+                                                <div className="w-full grid grid-cols-4 gap-2">
+                                                    <div className="w-full flex flex-col items-center justify-center">
+                                                        <Label className="text-xs text-muted-foreground">Preço Médio</Label>
+                                                        <Label className="text-sm font-bold">{formatCurrency(stock.buyPrice)}</Label>
+                                                    </div>
+                                                    <div className="w-full flex flex-col items-center justify-center">
+                                                        <Label className="text-xs text-muted-foreground">Cotação Atual</Label>
+                                                        <Label className="text-sm font-bold">{formatCurrency(stock.price)}</Label>
+                                                    </div>
+                                                    <div className="w-full flex flex-col items-center justify-center">
+                                                        <Label className="text-xs text-muted-foreground">Quantidade</Label>
+                                                        <Label className="text-sm font-bold">{stock.quantity}</Label>
+                                                    </div>
+                                                    <div className="w-full flex flex-col items-center justify-center">
+                                                        <Label className="text-xs text-muted-foreground">Rendimento</Label>
+                                                        <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                 </div>
-                            </>
-                        ) : (
-                            <div className="mt-4 h-12 flex items-center justify-center">
-                                <Skeleton className="w-full h-full rounded-md" />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </>
+            ) : (
+                <div className="w-full flex items-center justify-center h-full">
+                    <Label className="text-sm font-medium">Nenhum ativo encontrado</Label>
+                </div>
+            )}
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="max-w-xs sm:max-w-xl w-full">
+                    <DialogHeader>
+                        <DialogTitle>Novo Ativo</DialogTitle>
+                        <DialogDescription>Adicione um novo ativo à sua carteira de investimentos. Preencha os dados abaixo com as informações do ativo.</DialogDescription>
+                    </DialogHeader>
+
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="w-full grid grid-cols-3 gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="ticker"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Ticker</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    onBlur={(e) => {
+                                                        const ticker = e.target.value.toUpperCase();
+                                                        const existingStock = stocks.find(stock => stock.ticker === ticker);
+                                                        if (existingStock) {
+                                                            form.setValue('name', existingStock.name);
+                                                            form.setValue('type', existingStock.type);
+                                                        }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Nome</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
-                <Card className="w-full h-max col-span-1 md:col-span-2">
-                    <CardHeader className="flex items-center justify-between">
-                        <CardTitle>Ativos</CardTitle>
-                        <Tooltip delayDuration={500}>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant={consolidateStocks ? "default" : "ghost"}
-                                    onClick={() => setConsolidateStocks(!consolidateStocks)}
-                                    size="sm"
-                                >
-                                    Consolidar
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
-                            </TooltipContent>
-                        </Tooltip>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="w-full flex flex-col gap-2 items-center justify-center">
-                            {isFetching ? <Skeleton className="w-full h-24" /> : getStocksToUse()
-                                .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
-                                .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
-                                .map((stock) => (
-                                    <div key={stock.ticker} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
-                                        <div className="w-full flex items-center justify-between">
-                                            <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
-                                            <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
-                                        </div>
-                                        <div className="w-full grid grid-cols-4 gap-2">
-                                            <div className="w-full flex flex-col items-center justify-center">
-                                                <Label className="text-xs text-muted-foreground">Preço Médio</Label>
-                                                <Label className="text-sm font-bold">{formatCurrency(stock.buyPrice)}</Label>
-                                            </div>
-                                            <div className="w-full flex flex-col items-center justify-center">
-                                                <Label className="text-xs text-muted-foreground">Cotação Atual</Label>
-                                                <Label className="text-sm font-bold">{formatCurrency(stock.price)}</Label>
-                                            </div>
-                                            <div className="w-full flex flex-col items-center justify-center">
-                                                <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                                                <Label className="text-sm font-bold">{stock.quantity}</Label>
-                                            </div>
-                                            <div className="w-full flex flex-col items-center justify-center">
-                                                <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                                                <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                            <div className="w-full grid grid-cols-2 gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="walletId"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Carteira</FormLabel>
+                                            <FormControl>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Selecione uma carteira" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {wallets.map((wallet) => (
+                                                            <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="type"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Tipo</FormLabel>
+                                            <FormControl>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Selecione um tipo" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="stock">Ação</SelectItem>
+                                                        <SelectItem value="etf">ETF</SelectItem>
+                                                        <SelectItem value="real-estate">FII</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="w-full grid grid-cols-3 gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="quantity"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Quantidade</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="buyPrice"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Preço de Compra</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="buyDate"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Data de Compra</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} type="date" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <DialogFooter className="mt-6">
+                                <Button type="submit" disabled={isLoading}>{isLoading ? <Loader2 className="size-4 animate-spin" /> : "Adicionar"}</Button>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Cancelar</Button>
+                                </DialogClose>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

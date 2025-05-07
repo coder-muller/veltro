@@ -3471,12 +3471,14 @@ export namespace Prisma {
     buyPrice: number | null
     quantity: number | null
     price: number | null
+    sellPrice: number | null
   }
 
   export type StockSumAggregateOutputType = {
     buyPrice: number | null
     quantity: number | null
     price: number | null
+    sellPrice: number | null
   }
 
   export type StockMinAggregateOutputType = {
@@ -3487,6 +3489,9 @@ export namespace Prisma {
     buyPrice: number | null
     quantity: number | null
     price: number | null
+    buyDate: Date | null
+    sellDate: Date | null
+    sellPrice: number | null
     walletId: string | null
     userId: string | null
     createdAt: Date | null
@@ -3501,6 +3506,9 @@ export namespace Prisma {
     buyPrice: number | null
     quantity: number | null
     price: number | null
+    buyDate: Date | null
+    sellDate: Date | null
+    sellPrice: number | null
     walletId: string | null
     userId: string | null
     createdAt: Date | null
@@ -3515,6 +3523,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: number
+    sellDate: number
+    sellPrice: number
     walletId: number
     userId: number
     createdAt: number
@@ -3527,12 +3538,14 @@ export namespace Prisma {
     buyPrice?: true
     quantity?: true
     price?: true
+    sellPrice?: true
   }
 
   export type StockSumAggregateInputType = {
     buyPrice?: true
     quantity?: true
     price?: true
+    sellPrice?: true
   }
 
   export type StockMinAggregateInputType = {
@@ -3543,6 +3556,9 @@ export namespace Prisma {
     buyPrice?: true
     quantity?: true
     price?: true
+    buyDate?: true
+    sellDate?: true
+    sellPrice?: true
     walletId?: true
     userId?: true
     createdAt?: true
@@ -3557,6 +3573,9 @@ export namespace Prisma {
     buyPrice?: true
     quantity?: true
     price?: true
+    buyDate?: true
+    sellDate?: true
+    sellPrice?: true
     walletId?: true
     userId?: true
     createdAt?: true
@@ -3571,6 +3590,9 @@ export namespace Prisma {
     buyPrice?: true
     quantity?: true
     price?: true
+    buyDate?: true
+    sellDate?: true
+    sellPrice?: true
     walletId?: true
     userId?: true
     createdAt?: true
@@ -3672,6 +3694,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date
+    sellDate: Date | null
+    sellPrice: number | null
     walletId: string
     userId: string
     createdAt: Date
@@ -3705,6 +3730,9 @@ export namespace Prisma {
     buyPrice?: boolean
     quantity?: boolean
     price?: boolean
+    buyDate?: boolean
+    sellDate?: boolean
+    sellPrice?: boolean
     walletId?: boolean
     userId?: boolean
     createdAt?: boolean
@@ -3723,6 +3751,9 @@ export namespace Prisma {
     buyPrice?: boolean
     quantity?: boolean
     price?: boolean
+    buyDate?: boolean
+    sellDate?: boolean
+    sellPrice?: boolean
     walletId?: boolean
     userId?: boolean
     createdAt?: boolean
@@ -3739,6 +3770,9 @@ export namespace Prisma {
     buyPrice?: boolean
     quantity?: boolean
     price?: boolean
+    buyDate?: boolean
+    sellDate?: boolean
+    sellPrice?: boolean
     walletId?: boolean
     userId?: boolean
     createdAt?: boolean
@@ -3755,13 +3789,16 @@ export namespace Prisma {
     buyPrice?: boolean
     quantity?: boolean
     price?: boolean
+    buyDate?: boolean
+    sellDate?: boolean
+    sellPrice?: boolean
     walletId?: boolean
     userId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type StockOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "ticker" | "type" | "buyPrice" | "quantity" | "price" | "walletId" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["stock"]>
+  export type StockOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "ticker" | "type" | "buyPrice" | "quantity" | "price" | "buyDate" | "sellDate" | "sellPrice" | "walletId" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["stock"]>
   export type StockInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     dividends?: boolean | Stock$dividendsArgs<ExtArgs>
     wallet?: boolean | WalletDefaultArgs<ExtArgs>
@@ -3792,6 +3829,9 @@ export namespace Prisma {
       buyPrice: number
       quantity: number
       price: number
+      buyDate: Date
+      sellDate: Date | null
+      sellPrice: number | null
       walletId: string
       userId: string
       createdAt: Date
@@ -4229,6 +4269,9 @@ export namespace Prisma {
     readonly buyPrice: FieldRef<"Stock", 'Float'>
     readonly quantity: FieldRef<"Stock", 'Float'>
     readonly price: FieldRef<"Stock", 'Float'>
+    readonly buyDate: FieldRef<"Stock", 'DateTime'>
+    readonly sellDate: FieldRef<"Stock", 'DateTime'>
+    readonly sellPrice: FieldRef<"Stock", 'Float'>
     readonly walletId: FieldRef<"Stock", 'String'>
     readonly userId: FieldRef<"Stock", 'String'>
     readonly createdAt: FieldRef<"Stock", 'DateTime'>
@@ -5835,6 +5878,9 @@ export namespace Prisma {
     buyPrice: 'buyPrice',
     quantity: 'quantity',
     price: 'price',
+    buyDate: 'buyDate',
+    sellDate: 'sellDate',
+    sellPrice: 'sellPrice',
     walletId: 'walletId',
     userId: 'userId',
     createdAt: 'createdAt',
@@ -5871,6 +5917,14 @@ export namespace Prisma {
   };
 
   export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+  export const NullsOrder: {
+    first: 'first',
+    last: 'last'
+  };
+
+  export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
   /**
@@ -6081,6 +6135,9 @@ export namespace Prisma {
     buyPrice?: FloatFilter<"Stock"> | number
     quantity?: FloatFilter<"Stock"> | number
     price?: FloatFilter<"Stock"> | number
+    buyDate?: DateTimeFilter<"Stock"> | Date | string
+    sellDate?: DateTimeNullableFilter<"Stock"> | Date | string | null
+    sellPrice?: FloatNullableFilter<"Stock"> | number | null
     walletId?: StringFilter<"Stock"> | string
     userId?: StringFilter<"Stock"> | string
     createdAt?: DateTimeFilter<"Stock"> | Date | string
@@ -6098,6 +6155,9 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    buyDate?: SortOrder
+    sellDate?: SortOrderInput | SortOrder
+    sellPrice?: SortOrderInput | SortOrder
     walletId?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
@@ -6118,6 +6178,9 @@ export namespace Prisma {
     buyPrice?: FloatFilter<"Stock"> | number
     quantity?: FloatFilter<"Stock"> | number
     price?: FloatFilter<"Stock"> | number
+    buyDate?: DateTimeFilter<"Stock"> | Date | string
+    sellDate?: DateTimeNullableFilter<"Stock"> | Date | string | null
+    sellPrice?: FloatNullableFilter<"Stock"> | number | null
     walletId?: StringFilter<"Stock"> | string
     userId?: StringFilter<"Stock"> | string
     createdAt?: DateTimeFilter<"Stock"> | Date | string
@@ -6135,6 +6198,9 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    buyDate?: SortOrder
+    sellDate?: SortOrderInput | SortOrder
+    sellPrice?: SortOrderInput | SortOrder
     walletId?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
@@ -6157,6 +6223,9 @@ export namespace Prisma {
     buyPrice?: FloatWithAggregatesFilter<"Stock"> | number
     quantity?: FloatWithAggregatesFilter<"Stock"> | number
     price?: FloatWithAggregatesFilter<"Stock"> | number
+    buyDate?: DateTimeWithAggregatesFilter<"Stock"> | Date | string
+    sellDate?: DateTimeNullableWithAggregatesFilter<"Stock"> | Date | string | null
+    sellPrice?: FloatNullableWithAggregatesFilter<"Stock"> | number | null
     walletId?: StringWithAggregatesFilter<"Stock"> | string
     userId?: StringWithAggregatesFilter<"Stock"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Stock"> | Date | string
@@ -6375,6 +6444,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     dividends?: DividendCreateNestedManyWithoutStockInput
@@ -6390,6 +6462,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     walletId: string
     userId: string
     createdAt?: Date | string
@@ -6405,6 +6480,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     dividends?: DividendUpdateManyWithoutStockNestedInput
@@ -6420,6 +6498,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     walletId?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6435,6 +6516,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     walletId: string
     userId: string
     createdAt?: Date | string
@@ -6449,6 +6533,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -6461,6 +6548,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     walletId?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6697,6 +6787,28 @@ export namespace Prisma {
     not?: NestedFloatFilter<$PrismaModel> | number
   }
 
+  export type DateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type DividendListRelationFilter = {
     every?: DividendWhereInput
     some?: DividendWhereInput
@@ -6706,6 +6818,11 @@ export namespace Prisma {
   export type WalletScalarRelationFilter = {
     is?: WalletWhereInput
     isNot?: WalletWhereInput
+  }
+
+  export type SortOrderInput = {
+    sort: SortOrder
+    nulls?: NullsOrder
   }
 
   export type DividendOrderByRelationAggregateInput = {
@@ -6720,6 +6837,9 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    buyDate?: SortOrder
+    sellDate?: SortOrder
+    sellPrice?: SortOrder
     walletId?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
@@ -6730,6 +6850,7 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    sellPrice?: SortOrder
   }
 
   export type StockMaxOrderByAggregateInput = {
@@ -6740,6 +6861,9 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    buyDate?: SortOrder
+    sellDate?: SortOrder
+    sellPrice?: SortOrder
     walletId?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
@@ -6754,6 +6878,9 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    buyDate?: SortOrder
+    sellDate?: SortOrder
+    sellPrice?: SortOrder
     walletId?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
@@ -6764,6 +6891,7 @@ export namespace Prisma {
     buyPrice?: SortOrder
     quantity?: SortOrder
     price?: SortOrder
+    sellPrice?: SortOrder
   }
 
   export type FloatWithAggregatesFilter<$PrismaModel = never> = {
@@ -6780,6 +6908,36 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type StockScalarRelationFilter = {
@@ -7011,6 +7169,18 @@ export namespace Prisma {
     divide?: number
   }
 
+  export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type DividendUpdateManyWithoutStockNestedInput = {
     create?: XOR<DividendCreateWithoutStockInput, DividendUncheckedCreateWithoutStockInput> | DividendCreateWithoutStockInput[] | DividendUncheckedCreateWithoutStockInput[]
     connectOrCreate?: DividendCreateOrConnectWithoutStockInput | DividendCreateOrConnectWithoutStockInput[]
@@ -7160,6 +7330,28 @@ export namespace Prisma {
     not?: NestedFloatFilter<$PrismaModel> | number
   }
 
+  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
     in?: number[] | ListFloatFieldRefInput<$PrismaModel>
@@ -7174,6 +7366,47 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableWithAggregatesFilter<$PrismaModel> | Date | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedDateTimeNullableFilter<$PrismaModel>
+    _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type NestedIntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type WalletCreateWithoutUserInput = {
@@ -7210,6 +7443,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     dividends?: DividendCreateNestedManyWithoutStockInput
@@ -7224,6 +7460,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     walletId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7294,6 +7533,9 @@ export namespace Prisma {
     buyPrice?: FloatFilter<"Stock"> | number
     quantity?: FloatFilter<"Stock"> | number
     price?: FloatFilter<"Stock"> | number
+    buyDate?: DateTimeFilter<"Stock"> | Date | string
+    sellDate?: DateTimeNullableFilter<"Stock"> | Date | string | null
+    sellPrice?: FloatNullableFilter<"Stock"> | number | null
     walletId?: StringFilter<"Stock"> | string
     userId?: StringFilter<"Stock"> | string
     createdAt?: DateTimeFilter<"Stock"> | Date | string
@@ -7335,6 +7577,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     dividends?: DividendCreateNestedManyWithoutStockInput
@@ -7349,6 +7594,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7587,6 +7835,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     wallet: WalletCreateNestedOneWithoutStockInput
@@ -7601,6 +7852,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     walletId: string
     userId: string
     createdAt?: Date | string
@@ -7631,6 +7885,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     wallet?: WalletUpdateOneRequiredWithoutStockNestedInput
@@ -7645,6 +7902,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     walletId?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7666,6 +7926,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     walletId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7702,6 +7965,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     dividends?: DividendUpdateManyWithoutStockNestedInput
@@ -7716,6 +7982,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     walletId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7730,6 +7999,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     walletId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7743,6 +8015,9 @@ export namespace Prisma {
     buyPrice: number
     quantity: number
     price: number
+    buyDate: Date | string
+    sellDate?: Date | string | null
+    sellPrice?: number | null
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7756,6 +8031,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     dividends?: DividendUpdateManyWithoutStockNestedInput
@@ -7770,6 +8048,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7784,6 +8065,9 @@ export namespace Prisma {
     buyPrice?: FloatFieldUpdateOperationsInput | number
     quantity?: FloatFieldUpdateOperationsInput | number
     price?: FloatFieldUpdateOperationsInput | number
+    buyDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sellDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sellPrice?: NullableFloatFieldUpdateOperationsInput | number | null
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
