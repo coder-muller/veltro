@@ -370,7 +370,13 @@ export default function Stocks() {
             .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
             .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
             .map((stock) => (
-                <div key={`${stock.ticker}-${stock.walletId}`} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
+                <div
+                    key={`${stock.ticker}-${stock.walletId}`}
+                    className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
+                    onClick={() => {
+                        router.push(`/profile/stocks/${stock.walletId}/${stock.ticker}`);
+                    }}
+                >
                     <div className="w-full flex items-center justify-between">
                         <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
                         <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
@@ -552,15 +558,15 @@ export default function Stocks() {
                                     <Tooltip delayDuration={500}>
                                         <TooltipTrigger asChild>
                                             <Button
-                                                variant={consolidateStocks ? "default" : "ghost"}
+                                                variant={consolidateStocks ? "outline" : "default"}
                                                 onClick={() => setConsolidateStocks(!consolidateStocks)}
                                                 size="sm"
                                             >
-                                                Consolidar
+                                                {consolidateStocks ? "Desconsolidar" : "Consolidar"}
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            Consolidar ativos com o mesmo ticker para ter uma visão mais clara da composição da carteira
+                                            Consolidar/Desconsolidar ativos com o mesmo ticker e mesma carteira para ter uma visão mais clara da composição da carteira
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -598,6 +604,8 @@ export default function Stocks() {
                                             <FormControl>
                                                 <Input
                                                     {...field}
+                                                    disabled={isLoading}
+                                                    placeholder="Ticker"
                                                     onBlur={(e) => {
                                                         const ticker = e.target.value.toUpperCase();
                                                         const existingStock = stocks.find(stock => stock.ticker === ticker);
@@ -619,7 +627,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-2">
                                             <FormLabel>Nome</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} disabled={isLoading} placeholder="Nome do ativo" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -634,7 +642,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-1">
                                             <FormLabel>Carteira</FormLabel>
                                             <FormControl>
-                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                                                     <SelectTrigger className="w-full">
                                                         <SelectValue placeholder="Selecione uma carteira" />
                                                     </SelectTrigger>
@@ -656,7 +664,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-1">
                                             <FormLabel>Tipo</FormLabel>
                                             <FormControl>
-                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                                                     <SelectTrigger className="w-full">
                                                         <SelectValue placeholder="Selecione um tipo" />
                                                     </SelectTrigger>
@@ -680,7 +688,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-1">
                                             <FormLabel>Quantidade</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} disabled={isLoading} placeholder="Quantidade" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -693,7 +701,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-1">
                                             <FormLabel>Preço de Compra</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} disabled={isLoading} placeholder="Preço de compra" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -706,7 +714,7 @@ export default function Stocks() {
                                         <FormItem className="col-span-1">
                                             <FormLabel>Data de Compra</FormLabel>
                                             <FormControl>
-                                                <Input {...field} type="date" />
+                                                <Input {...field} type="date" disabled={isLoading} placeholder="Selecione uma data" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

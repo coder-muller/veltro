@@ -1,4 +1,5 @@
 const API_KEY = process.env.NEXT_PUBLIC_BRAPI_API_KEY;
+import { toast } from "sonner";
 
 export const getCurrentPrice = async (ticker: string) => {
     try {
@@ -6,6 +7,9 @@ export const getCurrentPrice = async (ticker: string) => {
         const data = await response.json();
 
         if (!data || !data.results || data.results.length === 0) {
+            toast.error(`Erro ao buscar preço do ativo ${ticker}`, {
+                description: "Verifique se o ticker está correto e tente novamente.",
+            });
             return 0;
         }
 

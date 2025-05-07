@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 type,
                 quantity: Number(quantity.replace(",", ".")),
                 buyPrice: Number(buyPrice.replace(",", ".")),
-                buyDate: new Date(buyDate),
+                buyDate: new Date(buyDate.split("T")[0] + "T03:00:00.000Z"),
                 price: 0,
             },
         });

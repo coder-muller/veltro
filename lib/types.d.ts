@@ -22,6 +22,9 @@ export type Stock = {
     buyPrice: number;
     quantity: number;
     price: number;
+    buyDate: Date;
+    sellDate: Date | null;
+    sellPrice: number | null;
 
     dividends: Dividend[];
 
