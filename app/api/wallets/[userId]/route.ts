@@ -4,8 +4,8 @@ import { z } from "zod";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
-    const { userId } = params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
 
     const cookieStore = await cookies();
     const token = cookieStore.get("token");
