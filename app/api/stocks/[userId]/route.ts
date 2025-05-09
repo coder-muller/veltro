@@ -99,4 +99,94 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
-    
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+
+    const { userId } = await params;
+
+    const body = await request.json();
+
+    const { oldTicker, oldWalletId, stockId, name, ticker, walletId, type, quantity, buyPrice, buyDate } = body;
+
+    if (oldTicker && oldWalletId) {
+        try {
+            const updatedStocks = await prisma.stock.updateMany({
+                where: {
+                    userId,
+                    ticker: oldTicker,
+                    walletId: oldWalletId,
+                },
+                data: {
+                    ticker,
+                    walletId,
+                    type,
+                    name,
+                }
+            });
+
+            return NextResponse.json(updatedStocks, { status: 200 });
+        } catch (error) {
+            console.error(error);
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        }
+    } else {
+        try {
+            const updatedStock = await prisma.stock.update({
+                where: {
+                    id: stockId,
+                    userId,
+                },
+                data: {
+                    quantity: Number(quantity.replace(",", ".")),
+                    buyPrice: Number(buyPrice.replace(",", ".")),
+                    buyDate: new Date(buyDate.split("T")[0] + "T03:00:00.000Z"),
+                }
+            });
+
+            return NextResponse.json(updatedStock, { status: 200 });
+        } catch (error) {
+            console.error(error);
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        }
+    }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+
+    const { userId } = await params;
+
+    const body = await request.json();
+
+    const { stockId, walletId, ticker } = body;
+
+    if (stockId) {
+        try {
+            await prisma.stock.delete({
+                where: {
+                    id: stockId,
+                    userId,
+                },
+            });
+
+            return NextResponse.json({ message: "Stock deleted" }, { status: 200 });
+        } catch (error) {
+            console.error(error);
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        }
+    } else if (walletId && ticker) {
+        try {
+            await prisma.stock.deleteMany({
+                where: {
+                    userId,
+                    walletId,
+                    ticker,
+                },
+            });
+
+            return NextResponse.json({ message: "Stocks deleted" }, { status: 200 });
+        } catch (error) {
+            console.error(error);
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        }
+    }
+}

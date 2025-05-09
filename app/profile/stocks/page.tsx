@@ -117,8 +117,10 @@ export default function Stocks() {
         }
     }
     useEffect(() => {
+        setIsFetching(true);
         fetchStocks();
         fetchWallets();
+        setIsFetching(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -196,7 +198,7 @@ export default function Stocks() {
             // Calcular valores do portfólio
             const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
             const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
-            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
+            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0) + filteredStocks.reduce((total, stock) => total + stock.dividends.reduce((acc, dividend) => acc + dividend.amount, 0), 0);
             const totalProfitPercentage = (totalProfit / portfolioValue);
 
             // Atualizar estados
@@ -225,7 +227,9 @@ export default function Stocks() {
     };
 
     useEffect(() => {
+        setIsFetching(true);
         processStockData();
+        setIsFetching(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stocks, search, typeSearch, consolidateStocks, chartType]);
 
@@ -396,7 +400,7 @@ export default function Stocks() {
                         </div>
                         <div className="w-full flex flex-col items-center justify-center">
                             <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                            <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
+                            <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit + stock.dividends.reduce((acc, dividend) => acc + dividend.amount, 0))} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
                         </div>
                     </div>
                 </div>
