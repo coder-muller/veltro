@@ -238,8 +238,9 @@ export default function Stocks() {
 
     useEffect(() => {
         setIsFetching(true);
-        processStockData();
-        setIsFetching(false);
+        processStockData().finally(() => {
+            setIsFetching(false);
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stocks, search, typeSearch, consolidateStocks, chartType]);
 
@@ -454,7 +455,12 @@ export default function Stocks() {
                     </Button>
                 </div>
             </div>
-            {processedStockCount > 0 ? (
+            {isFetching ? (
+                <div className="w-full flex flex-col items-center justify-center py-12">
+                    <Loader2 className="size-8 animate-spin mb-4" />
+                    <Label className="text-sm font-medium">Carregando seus ativos...</Label>
+                </div>
+            ) : processedStockCount > 0 ? (
                 <>
                     <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
@@ -595,7 +601,7 @@ export default function Stocks() {
                     </div>
                 </>
             ) : (
-                <div className="w-full flex items-center justify-center h-full">
+                <div className="w-full flex items-center justify-center h-full py-12">
                     <Label className="text-sm font-medium">Nenhum ativo encontrado</Label>
                 </div>
             )}
