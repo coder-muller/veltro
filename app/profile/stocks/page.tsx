@@ -144,11 +144,13 @@ export default function Stocks() {
                     quantity: newQuantity,
                     buyPrice: newBuyPrice,
                     price: currentPrice,
+                    id: `consolidated-${key}`
                 });
             } else {
                 consolidatedMap.set(key, {
                     ...stock,
-                    price: currentPrice
+                    price: currentPrice,
+                    id: stock.id || `single-${key}-${Math.random().toString(36).substring(2, 11)}`
                 });
             }
         }
@@ -198,7 +200,7 @@ export default function Stocks() {
             // Calcular valores do portfólio
             const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
             const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
-            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0) + filteredStocks.reduce((total, stock) => total + stock.dividends.reduce((acc, dividend) => acc + dividend.amount, 0), 0);
+            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
             const totalProfitPercentage = (totalProfit / portfolioValue);
 
             // Atualizar estados
@@ -375,32 +377,32 @@ export default function Stocks() {
             .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
             .map((stock) => (
                 <div
-                    key={`${stock.ticker}-${stock.walletId}`}
-                    className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-8 py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
+                    key={stock.id || `${stock.ticker}-${stock.walletId}-${Math.random().toString(36).substring(2, 11)}`}
+                    className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
                     onClick={() => {
                         router.push(`/profile/stocks/${stock.walletId}/${stock.ticker}`);
                     }}
                 >
                     <div className="w-full flex items-center justify-between">
-                        <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground">{stock.name}</span>}</Label>
+                        <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground hidden md:block">{stock.name}</span>}</Label>
                         <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
                     </div>
-                    <div className="w-full grid grid-cols-4 gap-2">
+                    <div className="w-full grid grid-cols-3 md:grid-cols-4 gap-2 items-center justify-center">
                         <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground">Preço Médio</Label>
-                            <Label className="text-sm font-bold">{formatCurrency(stock.buyPrice)}</Label>
+                            <Label className="text-xs text-muted-foreground text-center">Preço Médio</Label>
+                            <Label className="text-sm font-bold text-center">{formatCurrency(stock.buyPrice)}</Label>
+                        </div>
+                        <div className="w-full md:flex flex-col items-center justify-center hidden">
+                            <Label className="text-xs text-muted-foreground text-center">Cotação Atual</Label>
+                            <Label className="text-sm font-bold text-center">{formatCurrency(stock.price)}</Label>
                         </div>
                         <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground">Cotação Atual</Label>
-                            <Label className="text-sm font-bold">{formatCurrency(stock.price)}</Label>
+                            <Label className="text-xs text-muted-foreground text-center">Quantidade</Label>
+                            <Label className="text-sm font-bold text-center">{stock.quantity}</Label>
                         </div>
                         <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground">Quantidade</Label>
-                            <Label className="text-sm font-bold">{stock.quantity}</Label>
-                        </div>
-                        <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                            <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).totalProfit + stock.dividends.reduce((acc, dividend) => acc + dividend.amount, 0))} {<span className="text-xs text-muted-foreground">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
+                            <Label className="text-xs text-muted-foreground text-center">Rendimento</Label>
+                            <Label className="text-sm font-bold text-center">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground hidden md:block">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
                         </div>
                     </div>
                 </div>
@@ -409,15 +411,15 @@ export default function Stocks() {
 
     return (
         <div className="w-full flex flex-col gap-4">
-            <div className="w-full flex items-center justify-between">
+            <div className="w-full flex flex-col md:flex-row items-center justify-between">
                 <Label className="text-xl font-bold">Renda Variável</Label>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
+                <div className="w-full md:w-auto flex items-center flex-col-reverse md:flex-row gap-2 mt-2 md:mt-0">
+                    <div className="relative w-full md:w-auto">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground size-5" />
-                        <Input placeholder="Pesquisar" className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+                        <Input placeholder="Pesquisar" className="pl-8 w-full md:w-auto" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
                     <Select value={typeSearch} onValueChange={setTypeSearch}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full md:w-auto">
                             <SelectValue placeholder="Selecione um tipo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -427,7 +429,7 @@ export default function Stocks() {
                             <SelectItem value="real-estate">FIIs</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="default" onClick={() => {
+                    <Button variant="default" className="w-full md:w-auto" onClick={() => {
                         form.reset({
                             ticker: "",
                             name: "",
@@ -558,7 +560,8 @@ export default function Stocks() {
                             <CardHeader className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2">Ativos</CardTitle>
                                 <div className="flex items-center gap-2">
-                                    {hourPrice && <span className="text-xs text-muted-foreground">Cotações atualizadas dia {new Date(hourPrice).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    {hourPrice && <span className="text-xs text-muted-foreground hidden md:block">Cotações atualizadas dia {new Date(hourPrice).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    {hourPrice && <span className="text-xs text-muted-foreground block md:hidden">{new Date(hourPrice).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
                                     <Tooltip delayDuration={500}>
                                         <TooltipTrigger asChild>
                                             <Button
@@ -645,7 +648,7 @@ export default function Stocks() {
                                     )}
                                 />
                             </div>
-                            <div className="w-full grid grid-cols-2 gap-2">
+                            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <FormField
                                     control={form.control}
                                     name="walletId"
@@ -691,7 +694,7 @@ export default function Stocks() {
                                     )}
                                 />
                             </div>
-                            <div className="w-full grid grid-cols-3 gap-2">
+                            <div className="w-full grid grid-cols-2 md:grid-cols-3 gap-2">
                                 <FormField
                                     control={form.control}
                                     name="quantity"
@@ -722,7 +725,7 @@ export default function Stocks() {
                                     control={form.control}
                                     name="buyDate"
                                     render={({ field }) => (
-                                        <FormItem className="col-span-1">
+                                        <FormItem className="col-span-2 md:col-span-1">
                                             <FormLabel>Data de Compra</FormLabel>
                                             <FormControl>
                                                 <Input {...field} type="date" disabled={isLoading} placeholder="Selecione uma data" />

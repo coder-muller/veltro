@@ -144,24 +144,28 @@ export default function StockPage() {
 
         // Group dividends by date and consolidate them
         const dividendsByDate = new Map<string, Dividend>();
-
+        
         for (const dividend of allDividendsTemp) {
             const dateKey = new Date(dividend.date).toISOString().split('T')[0];
-
+            
             if (dividendsByDate.has(dateKey)) {
                 const existingDividend = dividendsByDate.get(dateKey)!;
                 dividendsByDate.set(dateKey, {
                     ...existingDividend,
+                    id: `${dateKey}-consolidated`,  // Create a unique ID for consolidated dividends
                     amount: existingDividend.amount + dividend.amount,
-                    description: existingDividend.description === dividend.description
-                        ? existingDividend.description
+                    description: existingDividend.description === dividend.description 
+                        ? existingDividend.description 
                         : `${existingDividend.description}, ${dividend.description}`
                 });
             } else {
-                dividendsByDate.set(dateKey, { ...dividend });
+                dividendsByDate.set(dateKey, { 
+                    ...dividend,
+                    id: dividend.id || `${dateKey}-${Math.random().toString(36).substring(2, 11)}` // Ensure there's an ID
+                });
             }
         }
-
+        
         const consolidatedDividends = Array.from(dividendsByDate.values());
         setAllDividends(consolidatedDividends.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
@@ -334,12 +338,10 @@ export default function StockPage() {
 
     return (
         <div className="w-full flex flex-col items-center justify-center gap-4">
-            <div className="w-full flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => router.back()}>
-                        <ArrowLeft className="size-4" /> Voltar
-                    </Button>
-                </div>
+            <div className="w-full flex flex-col md:flex-row items-center justify-between gap-2">
+                <Button variant="outline" size="sm" onClick={() => router.back()}>
+                    <ArrowLeft className="size-4" /> Voltar
+                </Button>
                 <div className="flex items-center gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -369,7 +371,7 @@ export default function StockPage() {
                     </Button>
                 </div>
             </div>
-            <div className="w-full grid grid-cols-3 gap-4 items-start justify-start">
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-start justify-start">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-center">{stock[0].name}</CardTitle>
@@ -650,7 +652,7 @@ export default function StockPage() {
 
                     <Form {...editTransactionForm}>
                         <form onSubmit={editTransactionForm.handleSubmit(onSubmitEditTransaction)} className="space-y-4">
-                            <div className="w-full grid grid-cols-3 gap-2">
+                            <div className="w-full grid grid-cols-2 md:grid-cols-3 gap-2">
                                 <FormField
                                     control={editTransactionForm.control}
                                     name="quantity"
@@ -681,7 +683,7 @@ export default function StockPage() {
                                     control={editTransactionForm.control}
                                     name="buyDate"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="col-span-2 md:col-span-1">
                                             <FormLabel>Data</FormLabel>
                                             <FormControl>
                                                 <Input {...field} type="date" placeholder="Data da transação" disabled={isLoading} />
