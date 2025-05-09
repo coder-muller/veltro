@@ -138,19 +138,27 @@ export default function Stocks() {
 
                 const newBuyPrice =
                     ((existing.buyPrice * existing.quantity) + (stock.buyPrice * stock.quantity)) / newQuantity;
+                
+                // Merge dividends from both stocks
+                const mergedDividends = [
+                    ...(existing.dividends || []), 
+                    ...(stock.dividends || [])
+                ];
 
                 consolidatedMap.set(key, {
                     ...existing,
                     quantity: newQuantity,
                     buyPrice: newBuyPrice,
                     price: currentPrice,
-                    id: `consolidated-${key}`
+                    id: `consolidated-${key}`,
+                    dividends: mergedDividends
                 });
             } else {
                 consolidatedMap.set(key, {
                     ...stock,
                     price: currentPrice,
-                    id: stock.id || `single-${key}-${Math.random().toString(36).substring(2, 11)}`
+                    id: stock.id || `single-${key}-${Math.random().toString(36).substring(2, 11)}`,
+                    dividends: stock.dividends || []
                 });
             }
         }
@@ -170,7 +178,8 @@ export default function Stocks() {
                 const currentPrice = await getCurrentPrice(updatedStocks[i].ticker);
                 updatedStocks[i] = {
                     ...updatedStocks[i],
-                    price: currentPrice
+                    price: currentPrice,
+                    dividends: updatedStocks[i].dividends || [] // Ensure dividends array exists
                 };
             } catch (error) {
                 console.error(`Erro ao buscar preço para ${updatedStocks[i].ticker}:`, error);
@@ -188,7 +197,6 @@ export default function Stocks() {
         try {
             const stocksToUse = await getStocksToUse();
 
-            // Filtrar os stocks com base na pesquisa e tipo
             const filteredStocks = stocksToUse.filter(
                 (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
                     stock.name.toLowerCase().includes(search.toLowerCase()))
