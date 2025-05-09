@@ -23,7 +23,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormItem, FormField, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
-import { getCurrentHourPrice, getCurrentPrice } from "@/lib/getCurrentPrice";
+import { getCurrentHourPrice, getCurrentPrice, getShortName } from "@/lib/getCurrentPrice";
 
 
 const newStockSchema = z.object({
@@ -606,12 +606,19 @@ export default function Stocks() {
                                                     {...field}
                                                     disabled={isLoading}
                                                     placeholder="Ticker"
-                                                    onBlur={(e) => {
+                                                    onBlur={async (e) => {
                                                         const ticker = e.target.value.toUpperCase();
                                                         const existingStock = stocks.find(stock => stock.ticker === ticker);
                                                         if (existingStock) {
                                                             form.setValue('name', existingStock.name);
                                                             form.setValue('type', existingStock.type);
+                                                            const currentPrice = await getCurrentPrice(ticker);
+                                                            form.setValue('buyPrice', currentPrice.toFixed(2).toString().replace(".", ","));
+                                                        } else {
+                                                            const shortName = await getShortName(ticker);
+                                                            form.setValue('name', shortName);
+                                                            const currentPrice = await getCurrentPrice(ticker);
+                                                            form.setValue('buyPrice', currentPrice.toFixed(2).toString().replace(".", ","));
                                                         }
                                                     }}
                                                 />

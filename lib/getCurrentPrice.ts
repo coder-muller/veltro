@@ -35,3 +35,23 @@ export const getCurrentHourPrice = async (): Promise<string> => {
         return "";
     }
 };
+
+export const getShortName = async (ticker: string) => {
+    try {
+        const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${API_KEY}`);
+        const data = await response.json();
+
+        if (!data || !data.results || data.results.length === 0) {
+            toast.error(`Erro ao buscar nome do ativo ${ticker}`, {
+                description: "Verifique se o ticker está correto e tente novamente.",
+            });
+            return "";
+        }
+
+        const nameParts = data.results[0].longName.split(" ");
+        return nameParts.length > 1 ? `${nameParts[0]} ${nameParts[1] || ""} ${nameParts[2] || ""}` : data.results[0].longName || "";
+    } catch (error) {
+        console.error(`Error fetching short name for ${ticker}:`, error);
+        return "";
+    }
+}

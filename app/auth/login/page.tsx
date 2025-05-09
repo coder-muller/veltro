@@ -13,12 +13,17 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+
 const formSchema = z.object({
     email: z.string().email({ message: "Invalid email" }),
     password: z.string().min(1, { message: "Password is required" }),
 });
 
 export default function Login() {
+
+    const [showPassword, setShowPassword] = useState(false);
 
     const router = useRouter();
 
@@ -104,7 +109,12 @@ export default function Login() {
                                     <FormItem>
                                         <FormLabel>Password</FormLabel>
                                         <FormControl>
-                                            <Input {...field} placeholder="********" type="password" />
+                                            <div className="relative">
+                                                <Input {...field} placeholder="********" type={showPassword ? "text" : "password"} />
+                                                <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2" onClick={() => setShowPassword(!showPassword)}>
+                                                    {!showPassword ? <Eye /> : <EyeOff />}
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
