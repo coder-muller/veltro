@@ -134,8 +134,13 @@ export default function Stocks() {
             if (consolidatedMap.has(key)) {
                 const existing = consolidatedMap.get(key);
 
-                const newQuantity = existing.quantity + stock.quantity;
+                // Count sold and active items to track status
+                const isCurrentSold = stock.sellDate !== null;
+                const totalStocks = existing.stockCount + 1;
+                const soldStocks = existing.soldCount + (isCurrentSold ? 1 : 0);
+                const allSold = soldStocks === totalStocks;
 
+                const newQuantity = existing.quantity + stock.quantity;
                 const newBuyPrice =
                     ((existing.buyPrice * existing.quantity) + (stock.buyPrice * stock.quantity)) / newQuantity;
                 
@@ -151,14 +156,20 @@ export default function Stocks() {
                     buyPrice: newBuyPrice,
                     price: currentPrice,
                     id: `consolidated-${key}`,
-                    dividends: mergedDividends
+                    dividends: mergedDividends,
+                    stockCount: totalStocks,
+                    soldCount: soldStocks,
+                    allSold: allSold
                 });
             } else {
                 consolidatedMap.set(key, {
                     ...stock,
                     price: currentPrice,
                     id: stock.id || `single-${key}-${Math.random().toString(36).substring(2, 11)}`,
-                    dividends: stock.dividends || []
+                    dividends: stock.dividends || [],
+                    stockCount: 1,
+                    soldCount: stock.sellDate !== null ? 1 : 0,
+                    allSold: stock.sellDate !== null
                 });
             }
         }
@@ -197,35 +208,39 @@ export default function Stocks() {
         try {
             const stocksToUse = await getStocksToUse();
 
+            // Filter by search and type
             const filteredStocks = stocksToUse.filter(
                 (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
                     stock.name.toLowerCase().includes(search.toLowerCase()))
                 .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
 
+            // Filter out sold stocks for calculations
+            const activeStocks = filteredStocks.filter(stock => stock.sellDate === null);
+
             setProcessedStocks(filteredStocks);
             setProcessedStockCount(filteredStocks.length);
 
-            // Calcular valores do portfólio
-            const portfolioValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
-            const currentValue = filteredStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
-            const totalProfit = filteredStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
-            const totalProfitPercentage = (totalProfit / portfolioValue);
+            // Calculate portfolio values only based on ACTIVE stocks
+            const portfolioValue = activeStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
+            const currentValue = activeStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
+            const totalProfit = activeStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
+            const totalProfitPercentage = portfolioValue > 0 ? (totalProfit / portfolioValue) : 0;
 
-            // Atualizar estados
+            // Update states
             setPortfolioValue(portfolioValue);
             setCurrentValue(currentValue);
             setTotalProfit(totalProfit);
             setTotalProfitPercentage(totalProfitPercentage);
 
-            // Gerar e atualizar dados do gráfico
-            const chartData = await generateChartData(filteredStocks);
+            // Generate and update chart data (only with active stocks)
+            const chartData = await generateChartData(activeStocks);
             setProcessedChartData(chartData);
 
             const hourPrice = await getCurrentHourPrice();
             setHourPrice(hourPrice);
         } catch (error) {
             console.error("Erro ao processar dados:", error);
-            // Definir valores padrão em caso de erro
+            // Set default values in case of error
             setProcessedStocks([]);
             setProcessedStockCount(0);
             setPortfolioValue(0);
@@ -384,38 +399,74 @@ export default function Stocks() {
         return processedStocks
             .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
             .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
-            .map((stock) => (
-                <div
-                    key={stock.id || `${stock.ticker}-${stock.walletId}-${Math.random().toString(36).substring(2, 11)}`}
-                    className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
-                    onClick={() => {
-                        router.push(`/profile/stocks/${stock.walletId}/${stock.ticker}`);
-                    }}
-                >
-                    <div className="w-full flex items-center justify-between">
-                        <Label className="text-sm font-bold flex items-center gap-2">{stock.ticker}{<span className="text-xs text-muted-foreground hidden md:block">{stock.name}</span>}</Label>
-                        <Label className="text-sm font-bold flex items-center gap-2">{formatCurrency(calculateStock(stock).currentValue)} {calculateStock(stock).totalProfitPercentage > 0 ? <ChevronsUp className="size-4 text-primary" /> : <ChevronsDown className="size-4 text-red-500" />}</Label>
+            .map((stock) => {
+                const isSold = stock.sellDate !== null || (consolidateStocks && stock.allSold === true);
+                
+                return (
+                    <div
+                        key={stock.id || `${stock.ticker}-${stock.walletId}-${Math.random().toString(36).substring(2, 11)}`}
+                        className={`w-full flex flex-col items-center justify-center gap-2 ${isSold ? 'bg-muted-foreground/5' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer ${isSold ? 'opacity-75' : ''}`}
+                        onClick={() => {
+                            router.push(`/profile/stocks/${stock.walletId}/${stock.ticker}`);
+                        }}
+                    >
+                        <div className="w-full flex items-center justify-between">
+                            <Label className="text-sm font-bold flex items-center gap-2">
+                                {stock.ticker}{<span className="text-xs text-muted-foreground hidden md:block">{stock.name}</span>}
+                                {isSold && <span className="text-xs text-muted-foreground">(Vendido)</span>}
+                            </Label>
+                            <Label className="text-sm font-bold flex items-center gap-2">
+                                {isSold ? 
+                                    formatCurrency(stock.sellPrice ? stock.sellPrice * stock.quantity : 0) :
+                                    formatCurrency(calculateStock(stock).currentValue)
+                                } 
+                                {!isSold && (calculateStock(stock).totalProfitPercentage > 0 ? 
+                                    <ChevronsUp className="size-4 text-primary" /> : 
+                                    <ChevronsDown className="size-4 text-red-500" />)
+                                }
+                            </Label>
+                        </div>
+                        <div className="w-full grid grid-cols-3 md:grid-cols-4 gap-2 items-center justify-center">
+                            <div className="w-full flex flex-col items-center justify-center">
+                                <Label className="text-xs text-muted-foreground text-center">Preço Médio</Label>
+                                <Label className="text-sm font-bold text-center">{formatCurrency(stock.buyPrice)}</Label>
+                            </div>
+                            <div className="w-full md:flex flex-col items-center justify-center hidden">
+                                <Label className="text-xs text-muted-foreground text-center">
+                                    {isSold ? "Preço de Venda" : "Cotação Atual"}
+                                </Label>
+                                <Label className="text-sm font-bold text-center">
+                                    {isSold ? 
+                                        formatCurrency(stock.sellPrice || 0) : 
+                                        formatCurrency(stock.price)
+                                    }
+                                </Label>
+                            </div>
+                            <div className="w-full flex flex-col items-center justify-center">
+                                <Label className="text-xs text-muted-foreground text-center">Quantidade</Label>
+                                <Label className="text-sm font-bold text-center">{stock.quantity}</Label>
+                            </div>
+                            <div className="w-full flex flex-col items-center justify-center">
+                                <Label className="text-xs text-muted-foreground text-center">
+                                    {isSold ? "Resultado" : "Rendimento"}
+                                </Label>
+                                <Label className="text-sm font-bold text-center">
+                                    {isSold ? 
+                                        formatCurrency((stock.sellPrice || 0) * stock.quantity - stock.buyPrice * stock.quantity) :
+                                        formatCurrency(calculateStock(stock).totalProfit)
+                                    } 
+                                    {<span className="text-xs text-muted-foreground hidden md:block">
+                                        {isSold ? 
+                                            `(${formatPercentage((stock.sellPrice || 0) / stock.buyPrice - 1)})` :
+                                            `(${formatPercentage(calculateStock(stock).totalProfitPercentage)})`
+                                        }
+                                    </span>}
+                                </Label>
+                            </div>
+                        </div>
                     </div>
-                    <div className="w-full grid grid-cols-3 md:grid-cols-4 gap-2 items-center justify-center">
-                        <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground text-center">Preço Médio</Label>
-                            <Label className="text-sm font-bold text-center">{formatCurrency(stock.buyPrice)}</Label>
-                        </div>
-                        <div className="w-full md:flex flex-col items-center justify-center hidden">
-                            <Label className="text-xs text-muted-foreground text-center">Cotação Atual</Label>
-                            <Label className="text-sm font-bold text-center">{formatCurrency(stock.price)}</Label>
-                        </div>
-                        <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground text-center">Quantidade</Label>
-                            <Label className="text-sm font-bold text-center">{stock.quantity}</Label>
-                        </div>
-                        <div className="w-full flex flex-col items-center justify-center">
-                            <Label className="text-xs text-muted-foreground text-center">Rendimento</Label>
-                            <Label className="text-sm font-bold text-center">{formatCurrency(calculateStock(stock).totalProfit)} {<span className="text-xs text-muted-foreground hidden md:block">({formatPercentage(calculateStock(stock).totalProfitPercentage)})</span>}</Label>
-                        </div>
-                    </div>
-                </div>
-            ));
+                );
+            });
     };
 
     return (

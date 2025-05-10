@@ -1,4 +1,3 @@
-
 export type Wallet = {
     id: string;
     userId: string;
@@ -29,6 +28,11 @@ export type Stock = {
     sellPrice: number | null;
 
     dividends: Dividend[];
+
+    // Properties for consolidated view
+    stockCount?: number;
+    soldCount?: number;
+    allSold?: boolean;
 
     createdAt: Date;
     updatedAt: Date;

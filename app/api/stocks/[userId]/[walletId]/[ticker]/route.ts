@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string, walletId: string, ticker: string }> }) {
 
     const { userId, walletId, ticker } = await params;
+    const includeAll = request.nextUrl.searchParams.get("includeAll") === "true";
 
     const token = await (await cookies()).get("token");
 
@@ -26,12 +27,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Build the where clause based on whether includeAll is true or not
+    const whereClause = {
+        userId,
+        walletId,
+        ticker,
+        ...(includeAll ? {} : { sellDate: null }) // Only include unsold stocks unless includeAll is true
+    };
+
     const stock = await prisma.stock.findMany({
-        where: {
-            userId: userId,
-            walletId: walletId,
-            ticker: ticker,
-        },
+        where: whereClause,
         include: {
             dividends: true,
             wallet: true,

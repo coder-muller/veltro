@@ -102,7 +102,7 @@ export default function StockPage() {
     const [stock, setStock] = useState<Stock[]>([]);
     const [allStocks, setAllStocks] = useState<Stock[]>([]);
     const [wallets, setWallets] = useState<Wallet[]>([]);
-    const [stockFilter, setStockFilter] = useState<"active" | "sold" | "all">("active");
+    const [stockFilter, setStockFilter] = useState<"active" | "sold" | "all">("all");
 
     const [totals, setTotals] = useState<{ totalQuantity: number, totalInvested: number, totalDividends: number, currentPrice: number, currentValue: number, totalProfit: number, totalProfitPercentage: number, averagePrice: number }>({ totalQuantity: 0, totalInvested: 0, totalDividends: 0, currentPrice: 0, currentValue: 0, totalProfit: 0, totalProfitPercentage: 0, averagePrice: 0 });
     const [allDividends, setAllDividends] = useState<Dividend[]>([]);
@@ -518,7 +518,7 @@ export default function StockPage() {
                     </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" disabled={stock.every(s => s.sellDate !== null)}>
                                 Vender Ativo
                             </Button>
                         </DropdownMenuTrigger>
@@ -668,7 +668,7 @@ export default function StockPage() {
                             <div className="w-full flex flex-col items-center justify-center gap-2">
                                 {stock && stock.length > 0 ? (
                                     stock
-                                        .sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime())
+                                        .sort((a, b) => new Date(b.buyDate).getTime() - new Date(a.buyDate).getTime())
                                         .map((stockItem) => (
                                             <div key={stockItem.id} className={`w-full flex flex-col items-center justify-center gap-2 border ${stockItem.sellDate ? 'bg-muted-foreground/5' : 'bg-muted'} rounded-lg p-4 cursor-pointer hover:bg-muted-foreground/10 transition-colors duration-200`} onClick={() => {
                                                 if (!stockItem.sellDate) {

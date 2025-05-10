@@ -34,7 +34,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         include: {
             wallet: true,
             dividends: true,
-        }
+        },
+        orderBy: [
+            {
+                sellDate: "desc",
+            },
+            {
+                name: "asc",
+            },
+        ],
     });
 
     return NextResponse.json(stocks, { status: 200 });
