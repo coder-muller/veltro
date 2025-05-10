@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 const formSchema = z.object({
     email: z.string().email({ message: "Invalid email" }),
@@ -40,7 +41,7 @@ export default function Login() {
             const response: AxiosResponse<{ message: string }> = await axios.get("/api/auth/me");
 
             if (response.status === 200) {
-                router.push("/profile/stocks");
+                router.push("/profile/dashboard");
             }
         }
 
@@ -56,7 +57,7 @@ export default function Login() {
 
             if (response.status === 200) {
                 toast.success("Login realizado com sucesso");
-                router.push("/profile/stocks");
+                router.push("/profile/dashboard");
             } else {
                 toast.error(response.data.message);
             }
@@ -120,9 +121,12 @@ export default function Login() {
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit" className="w-full mt-4">Login</Button>
+                            <Button type="submit" className="w-full mt-2">Login</Button>
                         </form>
                     </Form>
+                    <div className="text-center text-sm mt-4">
+                        <p>Não tem uma conta? <Link href="/auth/sign-up" className="text-primary font-semibold">Criar conta</Link></p>
+                    </div>
                 </CardContent>
             </Card>
         </div>

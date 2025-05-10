@@ -439,6 +439,12 @@ export default function Stocks() {
                         </SelectContent>
                     </Select>
                     <Button variant="default" className="w-full md:w-auto" onClick={() => {
+
+                        if (wallets.length === 0) {
+                            toast.error("Você não tem carteiras criadas. Crie uma carteira para adicionar ativos.");
+                            return;
+                        }
+
                         form.reset({
                             ticker: "",
                             name: "",
