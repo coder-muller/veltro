@@ -33,6 +33,7 @@ export type Stock = {
     stockCount?: number;
     soldCount?: number;
     allSold?: boolean;
+    isSold?: boolean;
 
     createdAt: Date;
     updatedAt: Date;

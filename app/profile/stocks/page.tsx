@@ -12,7 +12,7 @@ import { Plus, Search, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Cell, Pie, PieChart, TooltipProps } from "recharts";
-import { Stock, Wallet } from "@/lib/types";
+import { Stock, Wallet, Dividend } from "@/lib/types";
 import axios from "axios";
 import { getMe } from "@/lib/getMe";
 import { toast } from "sonner";
@@ -125,56 +125,93 @@ export default function Stocks() {
     }, []);
 
     const getConsolidatedStocks = async () => {
-        const consolidatedMap = new Map();
-
+        // Map to track all stocks by ticker-wallet combo
+        const allStocksMap = new Map<string, Stock[]>();
+        
+        // First pass: group all stocks by ticker-wallet
         for (const stock of stocks) {
             const key = `${stock.ticker}-${stock.walletId}`;
-            const currentPrice = await getCurrentPrice(stock.ticker);
-
-            if (consolidatedMap.has(key)) {
-                const existing = consolidatedMap.get(key);
-
-                // Count sold and active items to track status
-                const isCurrentSold = stock.sellDate !== null;
-                const totalStocks = existing.stockCount + 1;
-                const soldStocks = existing.soldCount + (isCurrentSold ? 1 : 0);
-                const allSold = soldStocks === totalStocks;
-
-                const newQuantity = existing.quantity + stock.quantity;
-                const newBuyPrice =
-                    ((existing.buyPrice * existing.quantity) + (stock.buyPrice * stock.quantity)) / newQuantity;
-                
-                // Merge dividends from both stocks
-                const mergedDividends = [
-                    ...(existing.dividends || []), 
-                    ...(stock.dividends || [])
-                ];
-
-                consolidatedMap.set(key, {
-                    ...existing,
-                    quantity: newQuantity,
-                    buyPrice: newBuyPrice,
-                    price: currentPrice,
-                    id: `consolidated-${key}`,
-                    dividends: mergedDividends,
-                    stockCount: totalStocks,
-                    soldCount: soldStocks,
-                    allSold: allSold
-                });
+            
+            if (allStocksMap.has(key)) {
+                allStocksMap.set(key, [...allStocksMap.get(key)!, stock]);
             } else {
-                consolidatedMap.set(key, {
-                    ...stock,
-                    price: currentPrice,
-                    id: stock.id || `single-${key}-${Math.random().toString(36).substring(2, 11)}`,
-                    dividends: stock.dividends || [],
-                    stockCount: 1,
-                    soldCount: stock.sellDate !== null ? 1 : 0,
-                    allSold: stock.sellDate !== null
-                });
+                allStocksMap.set(key, [stock]);
             }
         }
-
-        return Array.from(consolidatedMap.values());
+        
+        // Second pass: process each group
+        const result: Stock[] = [];
+        
+        for (const [key, stockGroup] of allStocksMap.entries()) {
+            const currentPrice = await getCurrentPrice(stockGroup[0].ticker);
+            const totalStocksInGroup = stockGroup.length;
+            const soldStocksInGroup = stockGroup.filter(s => s.sellDate !== null).length;
+            const allSold = soldStocksInGroup === totalStocksInGroup;
+            
+            if (allSold) {
+                // All stocks in this group are sold, consolidate them
+                let totalQuantity = 0;
+                let totalBuyValue = 0;
+                let totalSellValue = 0;
+                let allDividends: Dividend[] = [];
+                
+                for (const s of stockGroup) {
+                    totalQuantity += s.quantity;
+                    totalBuyValue += s.buyPrice * s.quantity;
+                    totalSellValue += (s.sellPrice || 0) * s.quantity;
+                    allDividends = [...allDividends, ...(s.dividends || [])];
+                }
+                
+                // Use the most recent sell date
+                const lastSoldStock = stockGroup.sort((a: Stock, b: Stock) => 
+                    new Date(b.sellDate || 0).getTime() - new Date(a.sellDate || 0).getTime()
+                )[0];
+                
+                const avgBuyPrice = totalBuyValue / totalQuantity;
+                const avgSellPrice = totalSellValue / totalQuantity;
+                
+                result.push({
+                    ...stockGroup[0],
+                    id: `consolidated-sold-${key}`,
+                    quantity: totalQuantity,
+                    buyPrice: avgBuyPrice,
+                    sellPrice: avgSellPrice,
+                    sellDate: lastSoldStock.sellDate,
+                    price: currentPrice,
+                    dividends: allDividends,
+                    isSold: true
+                });
+            } else {
+                // Group has some active stocks - only consolidate the active ones
+                const activeStocks = stockGroup.filter(s => s.sellDate === null);
+                
+                if (activeStocks.length > 0) {
+                    let totalQuantity = 0;
+                    let totalBuyValue = 0;
+                    let allDividends: Dividend[] = [];
+                    
+                    for (const s of activeStocks) {
+                        totalQuantity += s.quantity;
+                        totalBuyValue += s.buyPrice * s.quantity;
+                        allDividends = [...allDividends, ...(s.dividends || [])];
+                    }
+                    
+                    const avgBuyPrice = totalBuyValue / totalQuantity;
+                    
+                    result.push({
+                        ...activeStocks[0],
+                        id: `consolidated-active-${key}`,
+                        quantity: totalQuantity,
+                        buyPrice: avgBuyPrice,
+                        price: currentPrice,
+                        dividends: allDividends,
+                        isSold: false
+                    });
+                }
+            }
+        }
+        
+        return result;
     };
 
     // Get stocks based on consolidation preference
@@ -400,7 +437,20 @@ export default function Stocks() {
             .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
             .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
             .map((stock) => {
-                const isSold = stock.sellDate !== null || (consolidateStocks && stock.allSold === true);
+                const isSold = stock.sellDate !== null || stock.isSold === true;
+                
+                // Calculate total dividends for this stock
+                const totalDividends = stock.dividends?.reduce((sum, dividend) => sum + dividend.amount, 0) || 0;
+                
+                // Calculate profit including dividends for sold stocks
+                const soldProfit = isSold ? 
+                    (stock.sellPrice || 0) * stock.quantity - stock.buyPrice * stock.quantity + totalDividends :
+                    calculateStock(stock).totalProfit;
+                
+                // Calculate profit percentage
+                const soldProfitPercentage = isSold ?
+                    (soldProfit / (stock.buyPrice * stock.quantity)) :
+                    calculateStock(stock).totalProfitPercentage;
                 
                 return (
                     <div
@@ -452,18 +502,18 @@ export default function Stocks() {
                                 </Label>
                                 <Label className="text-sm font-bold text-center">
                                     {isSold ? 
-                                        formatCurrency((stock.sellPrice || 0) * stock.quantity - stock.buyPrice * stock.quantity) :
+                                        formatCurrency(soldProfit) :
                                         formatCurrency(calculateStock(stock).totalProfit)
                                     } 
                                     {<span className="text-xs text-muted-foreground hidden md:block">
                                         {isSold ? 
-                                            `(${formatPercentage((stock.sellPrice || 0) / stock.buyPrice - 1)})` :
+                                            `(${formatPercentage(soldProfitPercentage)})` :
                                             `(${formatPercentage(calculateStock(stock).totalProfitPercentage)})`
                                         }
                                     </span>}
                                 </Label>
                             </div>
-                        </div>
+                        </div>  
                     </div>
                 );
             });
