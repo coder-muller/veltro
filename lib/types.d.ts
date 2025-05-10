@@ -5,6 +5,8 @@ export type Wallet = {
 
     name: string;
 
+    Stock: Stock[];
+
     createdAt: Date;
     updatedAt: Date;
 }
