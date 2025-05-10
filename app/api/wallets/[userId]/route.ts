@@ -46,9 +46,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json(wallets);
 }
 
-export async function POST(request: NextRequest, { params }: { params: { userId: string } }) {
-
-    const { userId } = params;
+export async function POST(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
 
     const cookieStore = await cookies();
     const token = cookieStore.get("token");
@@ -78,8 +77,8 @@ export async function POST(request: NextRequest, { params }: { params: { userId:
     return NextResponse.json(wallet, { status: 201 });
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { userId: string } }) {
-    const { userId } = params;
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
 
     const cookieStore = await cookies();
     const token = cookieStore.get("token");
@@ -127,8 +126,8 @@ export async function PUT(request: NextRequest, { params }: { params: { userId: 
     return NextResponse.json(updatedWallet);
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { userId: string } }) {
-    const { userId } = params;
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
 
     const cookieStore = await cookies();
     const token = cookieStore.get("token");
