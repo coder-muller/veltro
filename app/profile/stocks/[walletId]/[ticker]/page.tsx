@@ -9,7 +9,7 @@ import { formatCurrency, formatPercentage } from "@/lib/format";
 import { getCurrentPrice } from "@/lib/getCurrentPrice";
 import { Dividend, Stock, Wallet } from "@/lib/types";
 import axios from "axios";
-import { ArrowLeft, Circle, CircleDashed, Loader2, Pencil, Plus, Trash } from "lucide-react";
+import { ArrowLeft, Circle, CircleDashed, Filter, Loader2, Pencil, Plus, Trash } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -495,7 +495,7 @@ export default function StockPage() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">
-                                {stockFilter === "active" ? "Ativos" : stockFilter === "sold" ? "Vendidos" : "Todos"}
+                                <Filter />{stockFilter === "active" ? "Ativos" : stockFilter === "sold" ? "Vendidos" : "Todos"}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
@@ -719,10 +719,10 @@ export default function StockPage() {
                                                         <div className="w-full flex items-center justify-between mt-1">
                                                             <Label className="text-xs text-muted-foreground">Resultado</Label>
                                                             <Label className={`text-sm font-medium ${stockItem.sellPrice && (stockItem.sellPrice - stockItem.buyPrice) > 0
-                                                                    ? 'text-green-500'
-                                                                    : (stockItem.sellPrice && (stockItem.sellPrice - stockItem.buyPrice) < 0
-                                                                        ? 'text-red-500'
-                                                                        : '')
+                                                                ? 'text-green-500'
+                                                                : (stockItem.sellPrice && (stockItem.sellPrice - stockItem.buyPrice) < 0
+                                                                    ? 'text-red-500'
+                                                                    : '')
                                                                 }`}>
                                                                 {formatCurrency((stockItem.sellPrice || 0) * stockItem.quantity - stockItem.buyPrice * stockItem.quantity)}
                                                                 {" "}

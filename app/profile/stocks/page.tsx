@@ -7,12 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentage } from "@/lib/format";
-import { calculateStock } from "@/lib/stocksCalculations";
 import { Plus, Search, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Cell, Pie, PieChart, TooltipProps } from "recharts";
-import { Stock, Wallet, Dividend } from "@/lib/types";
 import axios from "axios";
 import { getMe } from "@/lib/getMe";
 import { toast } from "sonner";
@@ -23,8 +21,10 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormItem, FormField, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
-import { getCurrentHourPrice, getCurrentPrice, getShortName } from "@/lib/getCurrentPrice";
-
+import { getCurrentPrice, getShortName } from "@/lib/getCurrentPrice";
+import { calculateStock } from "@/lib/stocksCalculations";
+import { useStocks } from "@/hooks/useStocks";
+import { Switch } from "@/components/ui/switch";
 
 const newStockSchema = z.object({
     ticker: z.string().min(1, { message: "Ticker é obrigatório" }),
@@ -43,7 +43,7 @@ const newStockSchema = z.object({
 })
 
 export default function Stocks() {
-
+    const router = useRouter();
     const form = useForm<z.infer<typeof newStockSchema>>({
         resolver: zodResolver(newStockSchema),
         defaultValues: {
@@ -53,348 +53,56 @@ export default function Stocks() {
             type: "",
             quantity: "",
             buyPrice: "",
+            buyDate: new Date().toISOString().split('T')[0],
         }
-    })
+    });
 
-    const router = useRouter();
-
-    const [isFetching, setIsFetching] = useState<boolean>(true);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [stocks, setStocks] = useState<Stock[]>([]);
-
-    const [chartType, setChartType] = useState<string>("by-asset");
+    // States for UI controls
     const [search, setSearch] = useState<string>("");
     const [typeSearch, setTypeSearch] = useState<string>("all");
-
+    const [chartType, setChartType] = useState<string>("by-asset");
     const [consolidateStocks, setConsolidateStocks] = useState<boolean>(true);
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [showOnlyActiveStocks, setShowOnlyActiveStocks] = useState<boolean>(true);
 
-    const [portfolioValue, setPortfolioValue] = useState<number>(0);
-    const [currentValue, setCurrentValue] = useState<number>(0);
-    const [totalProfit, setTotalProfit] = useState<number>(0);
-    const [totalProfitPercentage, setTotalProfitPercentage] = useState<number>(0);
+    // Use custom hook for stocks data management
+    const {
+        stocks,
+        wallets,
+        processedStocks,
+        processedChartData,
+        portfolioMetrics,
+        isFetching,
+        hourPrice,
+        fetchStocks,
+        processStockData
+    } = useStocks({
+        search,
+        typeSearch,
+        consolidateStocks,
+        chartType
+    });
 
-    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
-
-    const [processedChartData, setProcessedChartData] = useState<Array<{ name: string, value: number, type: string }>>([]);
-    const [wallets, setWallets] = useState<Wallet[]>([]);
-
-    const [processedStockCount, setProcessedStockCount] = useState<number>(0);
-    const [hourPrice, setHourPrice] = useState<string>("");
-
-    const fetchStocks = async () => {
-        setIsFetching(true)
-
-        const me = await getMe();
-
-        if (!me) {
-            toast.error("Unauthorized");
-            router.push("/auth/login");
-            setIsFetching(false);
-            return;
-        }
-
-        try {
-            const response = await axios.get(`/api/stocks/${me.userId}`);
-            setStocks(response.data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsFetching(false);
-        }
-    }
-
-    const fetchWallets = async () => {
-        const me = await getMe();
-        if (!me) {
-            return;
-        }
-
-        try {
-            const response = await axios.get(`/api/wallets/${me.userId}`);
-            setWallets(response.data);
-        } catch (error) {
-            console.error(error);
-        }
-    }
+    // Process data when dependencies change
     useEffect(() => {
-        setIsFetching(true);
-        fetchStocks();
-        fetchWallets();
-        setIsFetching(false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        processStockData();
+    }, [search, typeSearch, consolidateStocks, chartType, processStockData, showOnlyActiveStocks]);
 
-    const getConsolidatedStocks = async () => {
-        // Map to track all stocks by ticker-wallet combo
-        const allStocksMap = new Map<string, Stock[]>();
-        
-        // First pass: group all stocks by ticker-wallet
-        for (const stock of stocks) {
-            const key = `${stock.ticker}-${stock.walletId}`;
-            
-            if (allStocksMap.has(key)) {
-                allStocksMap.set(key, [...allStocksMap.get(key)!, stock]);
-            } else {
-                allStocksMap.set(key, [stock]);
-            }
-        }
-        
-        // Second pass: process each group
-        const result: Stock[] = [];
-        
-        for (const [key, stockGroup] of allStocksMap.entries()) {
-            const currentPrice = await getCurrentPrice(stockGroup[0].ticker);
-            const totalStocksInGroup = stockGroup.length;
-            const soldStocksInGroup = stockGroup.filter(s => s.sellDate !== null).length;
-            const allSold = soldStocksInGroup === totalStocksInGroup;
-            
-            if (allSold) {
-                // All stocks in this group are sold, consolidate them
-                let totalQuantity = 0;
-                let totalBuyValue = 0;
-                let totalSellValue = 0;
-                let allDividends: Dividend[] = [];
-                
-                for (const s of stockGroup) {
-                    totalQuantity += s.quantity;
-                    totalBuyValue += s.buyPrice * s.quantity;
-                    totalSellValue += (s.sellPrice || 0) * s.quantity;
-                    allDividends = [...allDividends, ...(s.dividends || [])];
-                }
-                
-                // Use the most recent sell date
-                const lastSoldStock = stockGroup.sort((a: Stock, b: Stock) => 
-                    new Date(b.sellDate || 0).getTime() - new Date(a.sellDate || 0).getTime()
-                )[0];
-                
-                const avgBuyPrice = totalBuyValue / totalQuantity;
-                const avgSellPrice = totalSellValue / totalQuantity;
-                
-                result.push({
-                    ...stockGroup[0],
-                    id: `consolidated-sold-${key}`,
-                    quantity: totalQuantity,
-                    buyPrice: avgBuyPrice,
-                    sellPrice: avgSellPrice,
-                    sellDate: lastSoldStock.sellDate,
-                    price: currentPrice,
-                    dividends: allDividends,
-                    isSold: true
-                });
-            } else {
-                // Group has some active stocks - only consolidate the active ones
-                const activeStocks = stockGroup.filter(s => s.sellDate === null);
-                
-                if (activeStocks.length > 0) {
-                    let totalQuantity = 0;
-                    let totalBuyValue = 0;
-                    let allDividends: Dividend[] = [];
-                    
-                    for (const s of activeStocks) {
-                        totalQuantity += s.quantity;
-                        totalBuyValue += s.buyPrice * s.quantity;
-                        allDividends = [...allDividends, ...(s.dividends || [])];
-                    }
-                    
-                    const avgBuyPrice = totalBuyValue / totalQuantity;
-                    
-                    result.push({
-                        ...activeStocks[0],
-                        id: `consolidated-active-${key}`,
-                        quantity: totalQuantity,
-                        buyPrice: avgBuyPrice,
-                        price: currentPrice,
-                        dividends: allDividends,
-                        isSold: false
-                    });
-                }
-            }
-        }
-        
-        return result;
-    };
+    // Destructure portfolio metrics
+    const { portfolioValue, currentValue, totalProfit, totalProfitPercentage } = portfolioMetrics;
 
-    // Get stocks based on consolidation preference
-    const getStocksToUse = async (): Promise<Stock[]> => {
-        if (consolidateStocks) {
-            return await getConsolidatedStocks();
-        }
+    // Calculate total portfolio value for chart percentage
+    const totalPortfolioValue = useMemo(() =>
+        processedStocks.reduce((total, stock) =>
+            total + calculateStock(stock).currentValue, 0),
+        [processedStocks]
+    );
 
-        const updatedStocks = [...stocks];
-        for (let i = 0; i < updatedStocks.length; i++) {
-            try {
-                const currentPrice = await getCurrentPrice(updatedStocks[i].ticker);
-                updatedStocks[i] = {
-                    ...updatedStocks[i],
-                    price: currentPrice,
-                    dividends: updatedStocks[i].dividends || [] // Ensure dividends array exists
-                };
-            } catch (error) {
-                console.error(`Erro ao buscar preço para ${updatedStocks[i].ticker}:`, error);
-            }
-        }
-
-        return updatedStocks;
-    };
-
-    // Estado para armazenar os dados processados
-    const [processedStocks, setProcessedStocks] = useState<Stock[]>([]);
-
-    // Função para processar os dados de stocks
-    const processStockData = async () => {
-        try {
-            const stocksToUse = await getStocksToUse();
-
-            // Filter by search and type
-            const filteredStocks = stocksToUse.filter(
-                (stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) ||
-                    stock.name.toLowerCase().includes(search.toLowerCase()))
-                .filter((stock) => typeSearch === "all" || stock.type === typeSearch);
-
-            // Filter out sold stocks for calculations
-            const activeStocks = filteredStocks.filter(stock => stock.sellDate === null);
-
-            setProcessedStocks(filteredStocks);
-            setProcessedStockCount(filteredStocks.length);
-
-            // Calculate portfolio values only based on ACTIVE stocks
-            const portfolioValue = activeStocks.reduce((total, stock) => total + calculateStock(stock).totalInvested, 0);
-            const currentValue = activeStocks.reduce((total, stock) => total + calculateStock(stock).currentValue, 0);
-            const totalProfit = activeStocks.reduce((total, stock) => total + calculateStock(stock).totalProfit, 0);
-            const totalProfitPercentage = portfolioValue > 0 ? (totalProfit / portfolioValue) : 0;
-
-            // Update states
-            setPortfolioValue(portfolioValue);
-            setCurrentValue(currentValue);
-            setTotalProfit(totalProfit);
-            setTotalProfitPercentage(totalProfitPercentage);
-
-            // Generate and update chart data (only with active stocks)
-            const chartData = await generateChartData(activeStocks);
-            setProcessedChartData(chartData);
-
-            const hourPrice = await getCurrentHourPrice();
-            setHourPrice(hourPrice);
-        } catch (error) {
-            console.error("Erro ao processar dados:", error);
-            // Set default values in case of error
-            setProcessedStocks([]);
-            setProcessedStockCount(0);
-            setPortfolioValue(0);
-            setCurrentValue(0);
-            setTotalProfit(0);
-            setTotalProfitPercentage(0);
-            setProcessedChartData([]);
-        }
-    };
-
-    useEffect(() => {
-        setIsFetching(true);
-        processStockData().finally(() => {
-            setIsFetching(false);
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stocks, search, typeSearch, consolidateStocks, chartType]);
-
-    // Prepare chart data based on chartType and filtering
-    const generateChartData = async (filteredStocks: Stock[]): Promise<{ name: string, value: number, type: string }[]> => {
-        if (chartType === "by-asset") {
-            return filteredStocks.map(stock => ({
-                name: stock.ticker,
-                value: calculateStock(stock).currentValue,
-                type: stock.type,
-                walletId: stock.walletId
-            }));
-        } else if (chartType === "by-wallet") {
-            // Group by wallet
-            const walletGroups: Record<string, { value: number, name: string, type: string }> = {};
-
-            filteredStocks.forEach(stock => {
-                const value = calculateStock(stock).currentValue;
-                const walletId = stock.walletId;
-
-                // Find wallet name in wallets array
-                const wallet = wallets.find(w => w.id === walletId);
-                const walletName = wallet?.name || "Carteira Desconhecida";
-
-                if (walletGroups[walletId]) {
-                    walletGroups[walletId].value += value;
-                } else {
-                    walletGroups[walletId] = {
-                        value,
-                        name: walletName,
-                        type: `wallet-${walletId}` // usando como identificador único
-                    };
-                }
-            });
-
-            return Object.values(walletGroups).map(({ name, value, type }) => ({
-                name,
-                value,
-                type
-            }));
-        } else {
-            // Group by type
-            const typeGroups: Record<string, number> = {};
-            filteredStocks.forEach(stock => {
-                const value = calculateStock(stock).currentValue;
-                if (typeGroups[stock.type]) {
-                    typeGroups[stock.type] += value;
-                } else {
-                    typeGroups[stock.type] = value;
-                }
-            });
-
-            return Object.entries(typeGroups).map(([type, value]) => {
-                const displayName = type === "stock" ? "Ações" :
-                    type === "real-estate" ? "FIIs" :
-                        type === "etf" ? "ETFs" : type;
-                return {
-                    name: displayName,
-                    value,
-                    type
-                };
-            });
-        }
-    };
-
-    const chartColors = {
-        "stock": "var(--chart-1)",
-        "real-estate": "var(--chart-2)",
-        "etf": "var(--chart-3)"
-    };
-
-    const chartConfig = {
-        "stock": { label: "Ações" },
-        "real-estate": { label: "FIIs" },
-        "etf": { label: "ETFs" }
-    };
-
-    // Valor total do portfólio calculado a partir dos dados processados
-    const totalPortfolioValue = processedStocks.reduce((total, stock) =>
-        total + calculateStock(stock).currentValue, 0);
-
-    const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
-        if (active && payload && payload.length > 0) {
-            const data = payload[0].payload;
-            const value = data.value;
-            const percentage = ((value / totalPortfolioValue) * 100).toFixed(2);
-
-            return (
-                <div className="bg-background border border-border rounded-md p-2 shadow-md">
-                    <p className="font-bold">{data.name}</p>
-                    <p className="text-sm">{formatCurrency(value)}</p>
-                    <p className="text-xs text-muted-foreground">{percentage}% do total</p>
-                </div>
-            );
-        }
-        return null;
-    };
-
+    // Form submission handler
     const onSubmit = async (data: z.infer<typeof newStockSchema>) => {
         setIsLoading(true);
         try {
-
             const me = await getMe();
 
             if (!me) {
@@ -427,31 +135,69 @@ export default function Stocks() {
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
-    // Função para renderizar a lista de ativos
-    const renderStocksList = () => {
+    // Custom tooltip component for chart
+    const CustomTooltip = useCallback(({ active, payload }: TooltipProps<number, string>) => {
+        if (active && payload && payload.length > 0) {
+            const data = payload[0].payload;
+            const value = data.value;
+            const percentage = ((value / totalPortfolioValue) * 100).toFixed(2);
+
+            return (
+                <div className="bg-background border border-border rounded-md p-2 shadow-md">
+                    <p className="font-bold">{data.name}</p>
+                    <p className="text-sm">{formatCurrency(value)}</p>
+                    <p className="text-xs text-muted-foreground">{percentage}% do total</p>
+                </div>
+            );
+        }
+        return null;
+    }, [totalPortfolioValue]);
+
+    // Chart color configuration
+    const chartColors = {
+        "stock": "var(--chart-1)",
+        "real-estate": "var(--chart-2)",
+        "etf": "var(--chart-3)"
+    };
+
+    const chartConfig = {
+        "stock": { label: "Ações" },
+        "real-estate": { label: "FIIs" },
+        "etf": { label: "ETFs" }
+    };
+
+    // Memoized function to render stocks list
+    const renderStocksList = useCallback(() => {
         if (isFetching) return <Skeleton className="w-full h-24" />;
 
+        if (processedStocks.length === 0) {
+            return (
+                <div className="w-full flex items-center justify-center h-full py-12">
+                    <Label className="text-sm font-medium">Nenhum ativo encontrado</Label>
+                </div>
+            );
+        }
+
         return processedStocks
-            .filter((stock) => stock.ticker.toLowerCase().includes(search.toLowerCase()) || stock.name.toLowerCase().includes(search.toLowerCase()))
-            .filter((stock) => typeSearch === "all" || stock.type === typeSearch)
+            .filter((stock) => showOnlyActiveStocks ? stock.sellDate === null : true)
             .map((stock) => {
                 const isSold = stock.sellDate !== null || stock.isSold === true;
-                
+
                 // Calculate total dividends for this stock
                 const totalDividends = stock.dividends?.reduce((sum, dividend) => sum + dividend.amount, 0) || 0;
-                
+
                 // Calculate profit including dividends for sold stocks
-                const soldProfit = isSold ? 
+                const soldProfit = isSold ?
                     (stock.sellPrice || 0) * stock.quantity - stock.buyPrice * stock.quantity + totalDividends :
                     calculateStock(stock).totalProfit;
-                
+
                 // Calculate profit percentage
                 const soldProfitPercentage = isSold ?
                     (soldProfit / (stock.buyPrice * stock.quantity)) :
                     calculateStock(stock).totalProfitPercentage;
-                
+
                 return (
                     <div
                         key={stock.id || `${stock.ticker}-${stock.walletId}-${Math.random().toString(36).substring(2, 11)}`}
@@ -466,12 +212,12 @@ export default function Stocks() {
                                 {isSold && <span className="text-xs text-muted-foreground">(Vendido)</span>}
                             </Label>
                             <Label className="text-sm font-bold flex items-center gap-2">
-                                {isSold ? 
+                                {isSold ?
                                     formatCurrency(stock.sellPrice ? stock.sellPrice * stock.quantity : 0) :
                                     formatCurrency(calculateStock(stock).currentValue)
-                                } 
-                                {!isSold && (calculateStock(stock).totalProfitPercentage > 0 ? 
-                                    <ChevronsUp className="size-4 text-primary" /> : 
+                                }
+                                {!isSold && (calculateStock(stock).totalProfitPercentage > 0 ?
+                                    <ChevronsUp className="size-4 text-primary" /> :
                                     <ChevronsDown className="size-4 text-red-500" />)
                                 }
                             </Label>
@@ -486,8 +232,8 @@ export default function Stocks() {
                                     {isSold ? "Preço de Venda" : "Cotação Atual"}
                                 </Label>
                                 <Label className="text-sm font-bold text-center">
-                                    {isSold ? 
-                                        formatCurrency(stock.sellPrice || 0) : 
+                                    {isSold ?
+                                        formatCurrency(stock.sellPrice || 0) :
                                         formatCurrency(stock.price)
                                     }
                                 </Label>
@@ -501,23 +247,23 @@ export default function Stocks() {
                                     {isSold ? "Resultado" : "Rendimento"}
                                 </Label>
                                 <Label className="text-sm font-bold text-center">
-                                    {isSold ? 
+                                    {isSold ?
                                         formatCurrency(soldProfit) :
                                         formatCurrency(calculateStock(stock).totalProfit)
-                                    } 
+                                    }
                                     {<span className="text-xs text-muted-foreground hidden md:block">
-                                        {isSold ? 
+                                        {isSold ?
                                             `(${formatPercentage(soldProfitPercentage)})` :
                                             `(${formatPercentage(calculateStock(stock).totalProfitPercentage)})`
                                         }
                                     </span>}
                                 </Label>
                             </div>
-                        </div>  
+                        </div>
                     </div>
                 );
             });
-    };
+    }, [isFetching, processedStocks, router, showOnlyActiveStocks]);
 
     return (
         <div className="w-full flex flex-col gap-4">
@@ -540,12 +286,10 @@ export default function Stocks() {
                         </SelectContent>
                     </Select>
                     <Button variant="default" className="w-full md:w-auto" onClick={() => {
-
                         if (wallets.length === 0) {
                             toast.error("Você não tem carteiras criadas. Crie uma carteira para adicionar ativos.");
                             return;
                         }
-
                         form.reset({
                             ticker: "",
                             name: "",
@@ -567,7 +311,7 @@ export default function Stocks() {
                     <Loader2 className="size-8 animate-spin mb-4" />
                     <Label className="text-sm font-medium">Carregando seus ativos...</Label>
                 </div>
-            ) : processedStockCount > 0 ? (
+            ) : processedStocks.length > 0 ? (
                 <>
                     <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
@@ -695,6 +439,16 @@ export default function Stocks() {
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             Consolidar/Desconsolidar ativos com o mesmo ticker e mesma carteira para ter uma visão mais clara da composição da carteira
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div>
+                                                <Switch checked={showOnlyActiveStocks} onCheckedChange={() => setShowOnlyActiveStocks(!showOnlyActiveStocks)} />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            Exibir apenas ativos com saldo
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -864,7 +618,6 @@ export default function Stocks() {
                             </DialogFooter>
                         </form>
                     </Form>
-
                 </DialogContent>
             </Dialog>
         </div>
