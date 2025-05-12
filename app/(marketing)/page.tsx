@@ -40,7 +40,7 @@ export default function Home() {
     };
 
     return (
-        <div className="flex flex-col items-center min-h-screen">
+        <div className="flex w-full flex-col items-center min-h-screen">
             {/* Fixed Header */}
             <header
                 className={`w-full fixed top-0 z-50 transition-all duration-300 ${scrolled
@@ -83,27 +83,35 @@ export default function Home() {
             {/* Hero Section */}
             <section className="w-full pt-28 md:pt-32 lg:pt-36 xl:pt-40 pb-12 md:pb-24 bg-background">
                 <div className="container px-4 md:px-6 m-auto">
-                    <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 xl:grid-cols-2">
+                    <div className="flex flex-col items-center justify-center gap-6">
                         <motion.div
                             initial="hidden"
                             animate="visible"
                             variants={fadeIn}
-                            className="flex flex-col justify-center space-y-6"
+                            className="flex flex-col justify-center items-center space-y-6"
                         >
-                            <div className="space-y-4">
+                            <div className="space-y-4 flex flex-col items-center justify-center">
                                 <motion.h1
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.2, duration: 0.7 }}
-                                    className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text"
+                                    className="text-4xl text-center font-bold tracking-tighter sm:text-5xl xl:text-6xl bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text"
                                 >
-                                    Veltro: Controle Inteligente para seus Investimentos
+                                    Veltro
+                                </motion.h1>
+                                <motion.h1
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2, duration: 0.7 }}
+                                    className="text-4xl text-center font-bold tracking-tighter sm:text-5xl xl:text-6xl bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text"
+                                >
+                                    Controle Inteligente para seus Investimentos
                                 </motion.h1>
                                 <motion.p
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.4, duration: 0.7 }}
-                                    className="max-w-[600px] text-muted-foreground md:text-xl"
+                                    className="max-w-[600px] text-muted-foreground text-center md:text-xl"
                                 >
                                     Simplifique o acompanhamento da sua carteira de investimentos com uma interface intuitiva.
                                 </motion.p>
@@ -141,11 +149,13 @@ export default function Home() {
                                 </Link>
                             </motion.div>
                         </motion.div>
+                        
+                        {/* Feature Cards Showcase */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.3, duration: 0.7 }}
-                            className="flex items-center justify-center mt-6 lg:mt-0"
+                            className="flex items-center justify-center mt-6 lg:mt-0 w-full max-w-3xl"
                         >
                             <div className="relative h-[350px] w-full md:h-[420px] lg:h-[450px] bg-muted/30 rounded-2xl overflow-hidden border shadow-lg group transition-all hover:shadow-xl">
                                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent transition-opacity group-hover:opacity-70"></div>
@@ -482,12 +492,8 @@ export default function Home() {
                         </div>
                         <div className="flex flex-col gap-1 items-center md:items-end">
                             <div className="text-xs text-muted-foreground">
-                                Developed with 💙 by Guilherme Muller
+                                Desenvolvido com 💙 por Guilherme Müller
                             </div>
-                            <nav className="flex gap-4 sm:gap-6">
-                                <Link href="#" className="text-xs hover:text-primary transition-colors">Termos de Serviço</Link>
-                                <Link href="#" className="text-xs hover:text-primary transition-colors">Política de Privacidade</Link>
-                            </nav>
                         </div>
                     </div>
                 </div>
