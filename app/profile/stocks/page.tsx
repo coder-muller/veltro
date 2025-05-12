@@ -60,7 +60,7 @@ export default function Stocks() {
     // States for UI controls
     const [search, setSearch] = useState<string>("");
     const [typeSearch, setTypeSearch] = useState<string>("all");
-    const [chartType, setChartType] = useState<string>("by-asset");
+    const [chartType, setChartType] = useState<string>("by-type");
     const [consolidateStocks, setConsolidateStocks] = useState<boolean>(true);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
