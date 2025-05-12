@@ -1,13 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { BarChart3, CircleDollarSign, LineChart, PieChart, UsersRound, Bitcoin, BadgeDollarSign, ChevronDown } from "lucide-react";
+import { BarChart3, CircleDollarSign, LineChart, PieChart, UsersRound, Bitcoin, BadgeDollarSign, ChevronDown, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
 export default function Home() {
     const [scrolled, setScrolled] = useState(false);
+    const { theme, setTheme } = useTheme();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -59,7 +61,7 @@ export default function Home() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="flex items-center gap-4"
+                        className="flex items-center gap-2"
                     >
                         <Link href="/auth/sign-up">
                             <Button variant="ghost" size="sm" className="hover:text-primary transition-colors">
@@ -71,6 +73,9 @@ export default function Home() {
                                 Entrar
                             </Button>
                         </Link>
+                        <Button variant="ghost" size="sm" className="hover:text-primary transition-colors" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                            {theme === "dark" ? <Sun /> : <Moon />}
+                        </Button>
                     </motion.div>
                 </div>
             </header>
