@@ -111,7 +111,7 @@ export default function StockPage() {
     const [stock, setStock] = useState<Stock[]>([]);
     const [allStocks, setAllStocks] = useState<Stock[]>([]);
     const [wallets, setWallets] = useState<Wallet[]>([]);
-    const [stockFilter, setStockFilter] = useState<"active" | "sold" | "all">("all");
+    const [stockFilter, setStockFilter] = useState<"active" | "sold" | "all">("active");
 
     const [totals, setTotals] = useState<{ totalQuantity: number, totalInvested: number, totalDividends: number, currentPrice: number, currentValue: number, totalProfit: number, totalProfitPercentage: number, averagePrice: number }>({ totalQuantity: 0, totalInvested: 0, totalDividends: 0, currentPrice: 0, currentValue: 0, totalProfit: 0, totalProfitPercentage: 0, averagePrice: 0 });
     const [allDividends, setAllDividends] = useState<Dividend[]>([]);
@@ -138,6 +138,14 @@ export default function StockPage() {
         getTotals();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stock]);
+
+    useEffect(() => {
+        // Set initial filter based on stock status
+        if (allStocks && allStocks.length > 0) {
+            const hasActiveStocks = allStocks.some(s => s.sellDate === null);
+            setStockFilter(hasActiveStocks ? "active" : "sold");
+        }
+    }, [allStocks])
 
     function filterStocks() {
         if (stockFilter === "active") {
@@ -562,7 +570,7 @@ export default function StockPage() {
                     </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" disabled={stock.every(s => s.sellDate !== null)}>
+                            <Button variant="outline" size="sm" disabled={stock.every(s => s.sellDate !== null)} className="hover:text-destructive cursor-pointer transition-colors duration-200">
                                 Vender Ativo
                             </Button>
                         </DropdownMenuTrigger>
