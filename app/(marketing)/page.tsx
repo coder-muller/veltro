@@ -1,11 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { BarChart3, CircleDollarSign, LineChart, PieChart, UsersRound, Bitcoin, BadgeDollarSign, ChevronDown, Sun, Moon } from "lucide-react";
+import { BarChart3, CircleDollarSign, UsersRound, Bitcoin, BadgeDollarSign, ChevronDown, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import router from "next/router";
 
 export default function Home() {
     const [scrolled, setScrolled] = useState(false);
@@ -18,21 +19,6 @@ export default function Home() {
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
-
-    const container = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
-    };
 
     const fadeIn = {
         hidden: { opacity: 0 },
@@ -53,7 +39,8 @@ export default function Home() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="font-bold text-xl text-primary"
+                        className="font-bold text-xl text-primary cursor-pointer"
+                        onClick={() => router.push("/")}
                     >
                         Veltro
                     </motion.div>
@@ -103,7 +90,7 @@ export default function Home() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.2, duration: 0.7 }}
-                                    className="text-4xl text-center font-bold tracking-tighter sm:text-5xl xl:text-6xl bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text"
+                                    className="text-4xl text-center font-bold tracking-tighter sm:text-5xl xl:text-6xl"
                                 >
                                     Controle Inteligente para seus Investimentos
                                 </motion.h1>
@@ -148,55 +135,6 @@ export default function Home() {
                                     </Button>
                                 </Link>
                             </motion.div>
-                        </motion.div>
-                        
-                        {/* Feature Cards Showcase */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.3, duration: 0.7 }}
-                            className="flex items-center justify-center mt-6 lg:mt-0 w-full max-w-3xl"
-                        >
-                            <div className="relative h-[350px] w-full md:h-[420px] lg:h-[450px] bg-muted/30 rounded-2xl overflow-hidden border shadow-lg group transition-all hover:shadow-xl">
-                                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent transition-opacity group-hover:opacity-70"></div>
-                                <motion.div
-                                    className="absolute inset-0 flex items-center justify-center p-4"
-                                    variants={container}
-                                    initial="hidden"
-                                    animate="show"
-                                >
-                                    <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-                                        <motion.div
-                                            variants={item}
-                                            className="flex flex-col items-center justify-center p-4 bg-background rounded-xl shadow-md border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all"
-                                        >
-                                            <PieChart className="h-12 w-12 text-primary mb-2" />
-                                            <p className="text-center text-sm font-medium">Visualização de Carteira</p>
-                                        </motion.div>
-                                        <motion.div
-                                            variants={item}
-                                            className="flex flex-col items-center justify-center p-4 bg-background rounded-xl shadow-md border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all"
-                                        >
-                                            <BarChart3 className="h-12 w-12 text-primary mb-2" />
-                                            <p className="text-center text-sm font-medium">Análise de Desempenho</p>
-                                        </motion.div>
-                                        <motion.div
-                                            variants={item}
-                                            className="flex flex-col items-center justify-center p-4 bg-background rounded-xl shadow-md border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all"
-                                        >
-                                            <LineChart className="h-12 w-12 text-primary mb-2" />
-                                            <p className="text-center text-sm font-medium">Acompanhamento Temporal</p>
-                                        </motion.div>
-                                        <motion.div
-                                            variants={item}
-                                            className="flex flex-col items-center justify-center p-4 bg-background rounded-xl shadow-md border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all"
-                                        >
-                                            <CircleDollarSign className="h-12 w-12 text-primary mb-2" />
-                                            <p className="text-center text-sm font-medium">Controle de Dividendos</p>
-                                        </motion.div>
-                                    </div>
-                                </motion.div>
-                            </div>
                         </motion.div>
                     </div>
                 </div>
@@ -400,7 +338,7 @@ export default function Home() {
                                 O Veltro é um projeto pessoal, criado e mantido por um único desenvolvedor independente, com o objetivo de fornecer uma solução completa para o gerenciamento de investimentos.
                             </p>
                             <p className="text-muted-foreground mb-8">
-                                Se você é um desenvolvedor e gostaria de contribuir para este projeto ou tem sugestões para melhorias, entre em contato:
+                                Se você é um desenvolvedor ou um usuário e gostaria de contribuir para este projeto ou tem sugestões para melhorias, entre em contato:
                             </p>
                             <div className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
