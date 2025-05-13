@@ -60,11 +60,27 @@ export const calculateBondTotals = (bond: Bond): {
     if (cashFlow.length >= 2) {
         try {
             irrAnnual = xirr(cashFlow);
-            irrMonthly = irrAnnual !== undefined ? Math.pow(1 + irrAnnual, 1 / 12) - 1 : undefined;
+            if (irrAnnual !== undefined) {
+                irrMonthly = Math.pow(1 + irrAnnual, 1 / 12) - 1;
+            }
         } catch (err) {
             console.warn("Erro ao calcular XIRR:", err);
         }
+    } else if (cashFlow.length === 1 && totalInvested > 0 && !isLiquidated) {
+        // Cálculo direto do IRR (fórmula de crescimento composto)
+        const initialInvestment = -cashFlow[0].amount; // valor positivo
+        const startDate = cashFlow[0].when;
+        const endDate = new Date();
+
+        const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+        const years = totalDays / 365.25;
+
+        if (years > 0 && currentValue > 0) {
+            irrAnnual = Math.pow(currentValue / initialInvestment, 1 / years) - 1;
+            irrMonthly = Math.pow(1 + irrAnnual, 1 / 12) - 1;
+        }
     }
+
 
     return {
         totalInvested,
