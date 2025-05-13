@@ -9,7 +9,7 @@ import { formatCurrency, formatPercentage } from "@/lib/format";
 import { getCurrentPrice } from "@/lib/getCurrentPrice";
 import { Dividend, Stock, Wallet } from "@/lib/types";
 import axios from "axios";
-import { ArrowLeft, Circle, CircleDashed, Filter, Loader2, Pencil, Plus, Trash } from "lucide-react";
+import { ArrowLeft, Circle, CircleDashed, Coins, Filter, Loader2, Pencil, Plus, Trash } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -45,6 +45,12 @@ const sellStockSchema = z.object({
     sellPrice: z.string().min(1, { message: "O preço é obrigatório" }).refine((value) => !isNaN(Number(value.replace(",", "."))), { message: "O preço deve ser um número" }),
     sellDate: z.string().min(1, { message: "A data é obrigatória" }),
     amount: z.string().optional(),
+});
+
+const newTransactionSchema = z.object({
+    quantity: z.string().min(1, { message: "A quantidade é obrigatória" }),
+    buyPrice: z.string().min(1, { message: "O preço é obrigatório" }).refine((value) => !isNaN(Number(value.replace(",", "."))), { message: "O preço deve ser um número" }),
+    buyDate: z.string().min(1, { message: "A data é obrigatória" }),
 });
 
 export default function StockPage() {
@@ -86,6 +92,14 @@ export default function StockPage() {
         },
     });
 
+    const newTransactionForm = useForm<z.infer<typeof newTransactionSchema>>({
+        resolver: zodResolver(newTransactionSchema),
+        defaultValues: {
+            quantity: "",
+            buyPrice: "",
+            buyDate: "",
+        },
+    });
     const [isLoading, setIsLoading] = useState(false);
 
     const [isAddingDividend, setIsAddingDividend] = useState(false);
@@ -104,6 +118,8 @@ export default function StockPage() {
 
     const [isSellDialogOpen, setIsSellDialogOpen] = useState(false);
     const [sellType, setSellType] = useState<"total" | "partial" | null>(null);
+
+    const [isNewTransactionDialogOpen, setIsNewTransactionDialogOpen] = useState(false);
 
     const { walletId, ticker } = useParams();
     const router = useRouter();
@@ -470,6 +486,39 @@ export default function StockPage() {
         }
     };
 
+    const onSubmitNewTransaction = async (data: z.infer<typeof newTransactionSchema>) => {
+        setIsLoading(true);
+
+        try {
+            const { data: { userId } } = await axios.get('/api/auth/me');
+
+            if (!userId) {
+                router.push('/auth/login');
+                throw new Error('Usuário não encontrado');
+            }
+
+            await axios.post(`/api/stocks/${userId}`, {
+                ...data,
+                type: stock[0].type,
+                walletId: stock[0].walletId,
+                ticker: stock[0].ticker,
+                name: stock[0].name
+            });
+
+            fetchStock();
+            newTransactionForm.reset();
+            setIsNewTransactionDialogOpen(false);
+
+            toast.success("Transação adicionada com sucesso");
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao adicionar a transação");
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     if (isFetching) {
         return <div className="w-full flex items-center justify-center gap-2">
             <Loader2 className="size-4 animate-spin" />
@@ -541,6 +590,7 @@ export default function StockPage() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+
                     <Button variant="default" size="sm" onClick={() => {
                         addDividendForm.reset({
                             amount: "",
@@ -549,7 +599,19 @@ export default function StockPage() {
                         });
                         setIsAddingDividend(true);
                     }}>
-                        <Plus className="size-4" /> Adicionar Dividendo
+                        <Coins className="size-4" /> Adicionar Dividendo
+                    </Button>
+
+                    <Button variant="default" size="sm" onClick={async () => {
+                        const currentPrice = await getCurrentPrice(stock[0].ticker);
+                        newTransactionForm.reset({
+                            quantity: "",
+                            buyPrice: currentPrice.toFixed(2).toString().replace(".", ","),
+                            buyDate: new Date().toISOString().split('T')[0],
+                        });
+                        setIsNewTransactionDialogOpen(true);
+                    }}>
+                        <Plus className="size-4" /> Adicionar Transação
                     </Button>
                 </div>
             </div>
@@ -1100,6 +1162,72 @@ export default function StockPage() {
                                     </DialogClose>
                                 </div>
                             </div>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isNewTransactionDialogOpen} onOpenChange={setIsNewTransactionDialogOpen}>
+                <DialogContent className="max-w-xs md:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Adicionar Transação</DialogTitle>
+                        <DialogDescription>Adicione uma nova transação</DialogDescription>
+                    </DialogHeader>
+
+                    <Form {...newTransactionForm}>
+                        <form onSubmit={newTransactionForm.handleSubmit(onSubmitNewTransaction)} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <FormField
+                                    control={newTransactionForm.control}
+                                    name="quantity"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Quantidade</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} placeholder="Quantidade da transação" disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={newTransactionForm.control}
+                                    name="buyPrice"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Preço</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} placeholder="Preço da transação" disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={newTransactionForm.control}
+                                    name="buyDate"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Data</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} type="date" placeholder="Data da transação" disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <DialogFooter className="mt-4">
+                                <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Salvar"}
+                                </Button>
+                                <DialogClose asChild>
+                                    <Button variant="outline" type="button" disabled={isLoading}>Cancelar</Button>
+                                </DialogClose>
+                            </DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>
