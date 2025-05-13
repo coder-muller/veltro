@@ -62,6 +62,7 @@ export default function BondsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [totals, setTotals] = useState({ investedValue: 0, currentValue: 0, profit: 0 });
   const [rentabilityType, setRentabilityType] = useState<"monthly" | "yearly" | "total">("monthly");
+  const [chartData, setChartData] = useState<{ byWallet: { name: string, value: number, color: string }[], byType: { name: string, value: number, color: string }[] }>({ byWallet: [], byType: [] });
 
   // Busca os ativos quando o componente for montado
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function BondsPage() {
       setBonds(data);
       setWallets(walletsData);
       calculateTotals(data);
+      setChartData(calculateChartData(data));
     } catch (error) {
       console.error(error);
     } finally {
@@ -95,6 +97,11 @@ export default function BondsPage() {
     const currentValue = bonds.reduce((acc, bond) => acc + calculateBondTotals(bond).currentValue, 0);
     const profit = bonds.reduce((acc, bond) => acc + calculateBondTotals(bond).profit, 0);
     setTotals({ investedValue, currentValue, profit });
+  }
+
+  const calculateChartData = (bonds: Bond[]): { byWallet: { name: string, value: number, color: string }[], byType: { name: string, value: number, color: string }[] } => {
+    // TODO: Implementar o cálculo do gráfico de composição da carteira de acordo com o chartType
+    return { byWallet: [], byType: [] };
   }
 
   // Função para incluir um novo ativo
