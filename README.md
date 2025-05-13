@@ -7,7 +7,7 @@
 </div>
 
 <p align="center">
-  <img src="public/veltro-logo.png" alt="Veltro Logo" width="200">
+  <img src="public/logo.png" alt="Veltro Logo" width="200">
 </p>
 
 ## 📊 Visão Geral
@@ -69,7 +69,7 @@ Veltro é uma plataforma moderna para controle de investimentos, desenvolvida in
    ```
    DATABASE_URL=postgresql://user:password@localhost:5432/veltro
    JWT_SECRET=seu_jwt_secret
-   NEXT_PUBLIC_BRAPI_API_KEY: seu_token_brapi
+   NEXT_PUBLIC_BRAPI_API_KEY:seu_token_brapi
    ```
 
 4. Execute as migrações do banco de dados:
