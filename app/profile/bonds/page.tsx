@@ -20,6 +20,7 @@ import { Bond, Wallet } from "@/lib/types";
 import { toast } from "sonner";
 import axios from "axios";
 import { getMe } from "@/lib/getMe";
+import { calculateBondTotals } from "@/lib/bondsCalculations";
 
 // Schema para novo papel
 const newBondSchema = z.object({
@@ -87,9 +88,9 @@ export default function BondsPage() {
   }
 
   const calculateTotals = (bonds: Bond[]) => {
-    const investedValue = bonds.reduce((acc, bond) => acc + bond.transactions.reduce((acc, transaction) => acc + transaction.transactionValue, 0), 0);
-    const currentValue = bonds.reduce((acc, bond) => acc + bond.transactions.reduce((acc, transaction) => acc + transaction.currentValue, 0), 0);
-    const profit = currentValue - investedValue;
+    const investedValue = bonds.reduce((acc, bond) => acc + calculateBondTotals(bond).totalInvested, 0);
+    const currentValue = bonds.reduce((acc, bond) => acc + calculateBondTotals(bond).currentValue, 0);
+    const profit = bonds.reduce((acc, bond) => acc + calculateBondTotals(bond).profit, 0);
     setTotals({ investedValue, currentValue, profit });
   }
 
@@ -341,13 +342,13 @@ export default function BondsPage() {
 function renderBonds(bonds: Bond[]) {
   return (
     bonds.map((bond) => (
-      <div key={bond.id} className="w-full flex flex-col items-center justify-center gap-4 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
+      <div key={bond.id} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
         <div className="w-full flex items-center justify-between">
           <Label className="text-sm font-bold flex items-center gap-2">
             {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
           </Label>
           <Label className="text-sm font-bold flex items-center gap-2">
-            {formatCurrency(bond.transactions.reduce((acc, transaction) => acc + transaction.currentValue, 0))}
+            {formatCurrency(calculateBondTotals(bond).currentValue)}
           </Label>
         </div>
         <div className="w-full grid grid-cols-4 gap-2">
@@ -361,14 +362,14 @@ function renderBonds(bonds: Bond[]) {
           </div>
           <div className="flex flex-col items-center justify-center">
             <Label className="text-xs text-muted-foreground">Valor investido</Label>
-            <Label className="text-sm font-bold">{formatCurrency(bond.transactions.reduce((acc, transaction) => acc + transaction.transactionValue, 0))}</Label>
+            <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).totalInvested)}</Label>
           </div>
           <div className="flex flex-col items-center justify-center">
-            <Label className="text-xs text-muted-foreground">Valor atual</Label>
-            <Label className="text-sm font-bold">{formatCurrency(bond.transactions.reduce((acc, transaction) => acc + transaction.currentValue, 0))}</Label>
+            <Label className="text-xs text-muted-foreground">Rendimento</Label>
+            <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).profit)} <span className="text-xs text-muted-foreground">({formatPercentage(calculateBondTotals(bond).irrMonthly || calculateBondTotals(bond).profitPercentageMonthly / 100)})</span></Label>
           </div>
         </div>
-        <div className="w-full flex items-center justify-center">
+        <div className="w-full flex items-center justify-center mt-2">
           <Label className="text-xs text-muted-foreground">{bond.description}</Label>
         </div>
       </div>
