@@ -51,3 +51,47 @@ export type Dividend = {
     createdAt: Date;
     updatedAt: Date;
 }
+
+export type Bond = {
+    id: string;
+    
+    userId: string;
+    user: User;
+
+    walletId: string;
+    wallet: Wallet;
+
+    name: string;
+    type: string;
+    buyDate: Date;
+    expirationDate: Date | null;
+    description: string | null;
+
+    transactions: Transaction[];
+
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+enum TransactionType {
+    INVESTMENT = "INVESTMENT",
+    LIQUIDATION = "LIQUIDATION",
+    RESCUE = "RESCUE",
+    CORRECTION = "CORRECTION",
+}
+
+export type Transaction = {
+    id: string;
+
+    bondId: string;
+    bond: Bond;
+
+    date: Date;
+    type: TransactionType;
+    currentValue: number;
+    transactionValue: number;
+    description: string | null;
+
+    createdAt: Date;
+    updatedAt: Date;
+}

@@ -20,6 +20,7 @@ model User {
 
   Wallet Wallet[]
   Stock  Stock[]
+  Bond   Bond[]
 }
 
 model Wallet {
@@ -33,6 +34,7 @@ model Wallet {
   updatedAt DateTime @updatedAt
 
   Stock Stock[]
+  Bond  Bond[]
 }
 
 model Stock {
@@ -69,6 +71,50 @@ model Dividend {
 
   stockId String
   stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bond {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  name           String
+  type           String
+  buyDate        DateTime
+  expirationDate DateTime?
+  description    String?
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TransactionType {
+  CORRECTION
+  INVESTMENT
+  LIQUIDATION
+  RESCUE
+}
+
+model Transaction {
+  id String @id @default(uuid())
+
+  bondId String
+  bond   Bond   @relation(fields: [bondId], references: [id], onDelete: Cascade)
+
+  date             DateTime
+  type             TransactionType
+  currentValue     Float
+  transactionValue Float
+  description      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
