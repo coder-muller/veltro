@@ -5,14 +5,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { userId } = await params;
     const data = await request.json();
 
-    const { amount, date, description, dateCom, ticker } = data;
+    const { amount, date, description, ticker } = data;
+
+    if (!amount || !date || !description || !ticker) {
+        return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 });
+    }
+
+    if (isNaN(new Date(date).getTime())) {
+        return NextResponse.json({ error: "Data inválida" }, { status: 400 });
+    }
 
     const avaliableStocks = await prisma.stock.findMany({
         where: {
             userId,
             ticker,
             buyDate: {
-                lte: dateCom ? new Date(dateCom + 'T23:59:59.999Z') : new Date(date + 'T23:59:59.999Z')
+                lte: new Date(date + 'T23:59:59.999Z')
             }
         }
     });
@@ -38,16 +46,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json(createdDividends, { status: 201 });
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
 
     const data = await request.json();
 
-    const { dividendId } = data;
+    const { dividendDate, description } = data;
+
+    if (!dividendDate || !description) {
+        return NextResponse.json({ error: "Data e descrição são obrigatórios" }, { status: 400 });
+    }
+
+    if (isNaN(new Date(dividendDate).getTime())) {
+        return NextResponse.json({ error: "Data inválida" }, { status: 400 });
+    }
 
     try {
-        const deletedDividend = await prisma.dividend.delete({
+        const deletedDividend = await prisma.dividend.deleteMany({
             where: {
-                id: dividendId,
+                stock: {
+                    userId,
+                },
+                date: {
+                    gte: new Date(dividendDate.split('T')[0] + 'T00:00:00.000Z'),
+                    lte: new Date(dividendDate.split('T')[0] + 'T23:59:59.999Z')
+                },
+                description
             }
         });
 

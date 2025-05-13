@@ -20,8 +20,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const editStockSchema = z.object({
     name: z.string().min(1, { message: "O nome é obrigatório" }),
@@ -38,7 +37,6 @@ const editTransactionSchema = z.object({
 
 const addDividendSchema = z.object({
     amount: z.string().min(1, { message: "O valor é obrigatório" }).refine((value) => !isNaN(Number(value.replace(",", "."))), { message: "O valor deve ser um número" }),
-    dateCom: z.string().optional(),
     date: z.string().min(1, { message: "A data é obrigatória" }),
     description: z.string().min(1, { message: "A descrição é obrigatória" }),
 });
@@ -74,7 +72,6 @@ export default function StockPage() {
         resolver: zodResolver(addDividendSchema),
         defaultValues: {
             amount: "",
-            dateCom: "",
             date: "",
             description: "",
         },
@@ -95,8 +92,6 @@ export default function StockPage() {
     const [isEditingStock, setIsEditingStock] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<Stock | null>(null);
     const [isEditingTransaction, setIsEditingTransaction] = useState(false);
-
-    const [isUsingCom, setIsUsingCom] = useState(false);
 
     const [isFetching, setIsFetching] = useState(true);
     const [stock, setStock] = useState<Stock[]>([]);
@@ -238,31 +233,31 @@ export default function StockPage() {
             }
         }
 
-        // Group dividends by date and consolidate them
-        const dividendsByDate = new Map<string, Dividend>();
+        const dividendsByDateAndDesc = new Map<string, Dividend>();
 
         for (const dividend of allDividendsTemp) {
             const dateKey = new Date(dividend.date).toISOString().split('T')[0];
+            // Criar chave composta com data e descrição para garantir agrupamento correto
+            const compositeKey = `${dateKey}-${dividend.description}`;
 
-            if (dividendsByDate.has(dateKey)) {
-                const existingDividend = dividendsByDate.get(dateKey)!;
-                dividendsByDate.set(dateKey, {
+            if (dividendsByDateAndDesc.has(compositeKey)) {
+                const existingDividend = dividendsByDateAndDesc.get(compositeKey)!;
+                dividendsByDateAndDesc.set(compositeKey, {
                     ...existingDividend,
-                    id: `${dateKey}-consolidated`,  // Create a unique ID for consolidated dividends
+                    id: `${compositeKey}-consolidated`,
                     amount: existingDividend.amount + dividend.amount,
-                    description: existingDividend.description === dividend.description
-                        ? existingDividend.description
-                        : `${existingDividend.description}, ${dividend.description}`
+                    // Mantém a mesma descrição já que são iguais
+                    description: dividend.description
                 });
             } else {
-                dividendsByDate.set(dateKey, {
+                dividendsByDateAndDesc.set(compositeKey, {
                     ...dividend,
-                    id: dividend.id || `${dateKey}-${Math.random().toString(36).substring(2, 11)}` // Ensure there's an ID
+                    id: dividend.id || `${compositeKey}-${Math.random().toString(36).substring(2, 11)}`
                 });
             }
         }
 
-        const consolidatedDividends = Array.from(dividendsByDate.values());
+        const consolidatedDividends = Array.from(dividendsByDateAndDesc.values());
         setAllDividends(consolidatedDividends.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
         setTotals({
@@ -303,7 +298,7 @@ export default function StockPage() {
         }
     }
 
-    const onSubmitDeleteDividend = async (dividendId: string) => {
+    const onSubmitDeleteDividend = async (dividendDate: string, description: string) => {
         setIsLoading(true);
 
         try {
@@ -314,7 +309,7 @@ export default function StockPage() {
                 throw new Error('Usuário não encontrado');
             }
 
-            await axios.delete(`/api/dividends/${userId}`, { data: { dividendId } });
+            await axios.delete(`/api/dividends/${userId}`, { data: { dividendDate, description } });
 
             fetchStock();
             toast.success("Dividendo deletado com sucesso");
@@ -551,7 +546,6 @@ export default function StockPage() {
                             amount: "",
                             date: new Date().toISOString().split('T')[0],
                             description: "",
-                            dateCom: new Date().toISOString().split('T')[0],
                         });
                         setIsAddingDividend(true);
                     }}>
@@ -771,7 +765,7 @@ export default function StockPage() {
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction className="cursor-pointer" onClick={() => onSubmitDeleteDividend(dividend.id)}>Deletar</AlertDialogAction>
+                                                    <AlertDialogAction className="cursor-pointer" onClick={() => onSubmitDeleteDividend(new Date(dividend.date).toISOString(), dividend.description)}>Deletar</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -1052,7 +1046,7 @@ export default function StockPage() {
 
                     <Form {...addDividendForm}>
                         <form onSubmit={addDividendForm.handleSubmit(onSubmitAddDividend)} className="space-y-4">
-                            <div className={`w-full grid grid-cols-2 ${isUsingCom ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
+                            <div className="w-full grid grid-cols-2 gap-2">
                                 <FormField
                                     control={addDividendForm.control}
                                     name="amount"
@@ -1066,27 +1060,13 @@ export default function StockPage() {
                                         </FormItem>
                                     )}
                                 />
-                                {isUsingCom && (
-                                    <FormField
-                                        control={addDividendForm.control}
-                                        name="dateCom"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Data COM</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} type="date" placeholder="Data do dividendo" disabled={isLoading} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
+
                                 <FormField
                                     control={addDividendForm.control}
                                     name="date"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Data {isUsingCom && "de recebimento"}</FormLabel>
+                                            <FormLabel>Data</FormLabel>
                                             <FormControl>
                                                 <Input {...field} type="date" placeholder="Data do dividendo" disabled={isLoading} />
                                             </FormControl>
@@ -1111,19 +1091,6 @@ export default function StockPage() {
                             />
 
                             <div className="mt-4 w-full flex items-center justify-between gap-2">
-                                <div className="w-full flex items-center justify-start gap-2">
-                                    <Tooltip delayDuration={500}>
-                                        <TooltipTrigger asChild>
-                                            <div className="flex items-center gap-2">
-                                                <Checkbox checked={isUsingCom} onCheckedChange={() => setIsUsingCom(!isUsingCom)} />
-                                                <Label className="text-xs font-normal text-muted-foreground">Usar data COM</Label>
-                                            </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Usar data COM para recebimento do dividendo com mais precisão. Caso não seja informada, será usado a data de recebimento do dividendo.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </div>
                                 <div className="w-full flex items-center justify-end gap-2">
                                     <Button type="submit" disabled={isLoading}>
                                         {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Salvar"}
