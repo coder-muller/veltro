@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardHeader, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, Info, Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/format";
@@ -22,7 +22,6 @@ import axios from "axios";
 import { getMe } from "@/lib/getMe";
 import { calculateBondTotals } from "@/lib/bondsCalculations";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import Link from "next/link";
 
 // Schema para novo papel
 const newBondSchema = z.object({
@@ -216,149 +215,144 @@ export default function BondsPage() {
                       <DropdownMenuItem onClick={() => setRentabilityType("total")}>Rentabilidade Total</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Link href="/profile/bonds/calculations-info">
-                    <Button variant="outline" className="text-xs dark:bg-muted" size="icon">
-                    <Info className="size-4" />
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full flex flex-col gap-2">
-                {renderBonds(bonds, rentabilityType)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full flex flex-col gap-2">
+                  {renderBonds(bonds, rentabilityType)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Dialog de adição de ativos */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="min-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Adicionar Ativo</DialogTitle>
-            <DialogDescription>Adicione um novo ativo a sua carteira de renda fixa.</DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Digite o nome do ativo" disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Digite o tipo do ativo" disabled={isLoading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="walletId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Carteira</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione uma carteira" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {wallets.map((wallet) => (
-                              <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <FormField
-                  control={form.control}
-                  name="buyDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data de compra</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Digite a data de compra" type="date" disabled={isLoading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="expirationDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data de vencimento</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Digite a data de vencimento" type="date" disabled={isLoading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="investedValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor investido</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Digite o valor investido" disabled={isLoading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Digite a descrição do ativo" disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter className="mt-4">
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Adicionar"}
-                </Button>
-                <DialogClose asChild>
-                  <Button type="reset" variant="outline">Cancelar</Button>
-                </DialogClose>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog >
-    </>
-  )
-}
+          {/* Dialog de adição de ativos */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="min-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Adicionar Ativo</DialogTitle>
+                <DialogDescription>Adicione um novo ativo a sua carteira de renda fixa.</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Digite o nome do ativo" disabled={isLoading} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Digite o tipo do ativo" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="walletId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Carteira</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione uma carteira" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {wallets.map((wallet) => (
+                                  <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="buyDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de compra</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Digite a data de compra" type="date" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="expirationDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de vencimento</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Digite a data de vencimento" type="date" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="investedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor investido</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Digite o valor investido" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrição</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Digite a descrição do ativo" disabled={isLoading} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="mt-4">
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Adicionar"}
+                    </Button>
+                    <DialogClose asChild>
+                      <Button type="reset" variant="outline">Cancelar</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog >
+        </>
+      )
+      }
     </div >
   );
 }
