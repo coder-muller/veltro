@@ -13,7 +13,7 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -76,6 +76,13 @@ export default function Login() {
 
     return (
         <div className="flex items-center justify-center flex-col gap-10 h-screen">
+            <div className="absolute top-4 left-4">
+                <Link href="/">
+                    <Button variant="outline">
+                        <ArrowLeft /> Voltar
+                    </Button>
+                </Link>
+            </div>
             <div className="absolute top-4 right-4">
                 <ModeToggle />
             </div>

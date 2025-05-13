@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -69,6 +69,13 @@ export default function SignUp() {
 
     return (
         <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="absolute top-4 left-4">
+                <Link href="/">
+                    <Button variant="outline">
+                        <ArrowLeft /> Voltar
+                    </Button>
+                </Link>
+            </div>
             <div className="absolute top-4 right-4">
                 <ModeToggle />
             </div>
