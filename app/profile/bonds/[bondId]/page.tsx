@@ -170,7 +170,7 @@ export default function BondPage() {
                                 <Label className="text-xl font-bold">{formatCurrency(calculateBondTotals(bond).profit)}</Label>
                             </CardContent>
                             <CardFooter>
-                                <Label className="text-xs font-medium text-muted-foreground">{calculateBondTotals(bond).irrMonthly ? `Rentabilidade efetiva de ${formatPercentage(calculateBondTotals(bond).irrMonthly as number)} a.m.` : "Rentabilidade total de " + formatPercentage(calculateBondTotals(bond).profitPercentage as number)}</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">{calculateBondTotals(bond).irrMonthly ? `Rentabilidade efetiva de ${formatPercentage(calculateBondTotals(bond).irrMonthly as number)} a.m.` : "Rentabilidade total de " + (calculateBondTotals(bond).profitPercentage.toFixed(2) + "%")}</Label>
                             </CardFooter>
                         </Card>
                     </div>

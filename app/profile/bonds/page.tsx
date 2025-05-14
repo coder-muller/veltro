@@ -23,6 +23,8 @@ import { getMe } from "@/lib/getMe";
 import { calculateBondTotals } from "@/lib/bondsCalculations";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, TooltipProps } from "recharts";
 
 // Schema para novo papel
 const newBondSchema = z.object({
@@ -63,7 +65,7 @@ export default function BondsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [totals, setTotals] = useState({ investedValue: 0, currentValue: 0, profit: 0 });
   const [rentabilityType, setRentabilityType] = useState<"monthly" | "yearly" | "total">("monthly");
-  const [chartData, setChartData] = useState<{ byWallet: { name: string, value: number, color: string }[], byType: { name: string, value: number, color: string }[] }>({ byWallet: [], byType: [] });
+  const [chartData, setChartData] = useState<{ byWallet: { name: string, value: number, color: string, type: string }[], byType: { name: string, value: number, color: string, type: string }[] }>({ byWallet: [], byType: [] });
 
   // Busca os ativos quando o componente for montado
   useEffect(() => {
@@ -100,9 +102,62 @@ export default function BondsPage() {
     setTotals({ investedValue, currentValue, profit });
   }
 
-  const calculateChartData = (bonds: Bond[]): { byWallet: { name: string, value: number, color: string }[], byType: { name: string, value: number, color: string }[] } => {
-    // TODO: Implementar o cálculo do gráfico de composição da carteira de acordo com o chartType
-    return { byWallet: [], byType: [] };
+  const calculateChartData = (bonds: Bond[]): { byWallet: { name: string, value: number, color: string, type: string }[], byType: { name: string, value: number, color: string, type: string }[] } => {
+    const chartColors = [
+      "var(--chart-1)",
+      "var(--chart-2)",
+      "var(--chart-3)",
+      "var(--chart-4)",
+      "var(--chart-5)",
+      "var(--chart-6)",
+      "var(--chart-7)",
+      "var(--chart-8)",
+      "var(--chart-9)",
+      "var(--chart-10)",
+    ];
+
+    // Group by wallet
+    const walletGroups = new Map<string, { name: string; value: number }>();
+    // Group by type
+    const typeGroups = new Map<string, { name: string; value: number, type: string }>();
+
+    bonds.forEach(bond => {
+      const bondValue = calculateBondTotals(bond).currentValue;
+
+      // By wallet
+      const walletName = bond.wallet?.name || "Sem carteira";
+      if (walletGroups.has(walletName)) {
+        walletGroups.get(walletName)!.value += bondValue;
+      } else {
+        walletGroups.set(walletName, { name: walletName, value: bondValue });
+      }
+
+      // By type
+      const bondType = bond.type || "Outros";
+      if (typeGroups.has(bondType)) {
+        typeGroups.get(bondType)!.value += bondValue;
+      } else {
+        typeGroups.set(bondType, { name: bondType, value: bondValue, type: bondType });
+      }
+    });
+
+    // Convert to arrays and add colors
+    const byWallet = Array.from(walletGroups.values())
+      .map((item, index) => ({
+        ...item,
+        color: chartColors[index % chartColors.length],
+        type: 'wallet'
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    const byType = Array.from(typeGroups.values())
+      .map((item, index) => ({
+        ...item,
+        color: chartColors[index % chartColors.length]
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    return { byWallet, byType };
   }
 
   // Função para incluir um novo ativo
@@ -142,6 +197,27 @@ export default function BondsPage() {
     });
     setIsDialogOpen(true);
   }
+
+  // Custom tooltip component for chart
+  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+    if (active && payload && payload.length > 0) {
+      const data = payload[0].payload;
+      const value = data.value;
+      const totalValue = chartType === "by-type"
+        ? chartData.byType.reduce((acc, item) => acc + item.value, 0)
+        : chartData.byWallet.reduce((acc, item) => acc + item.value, 0);
+      const percentage = ((value / totalValue) * 100).toFixed(2);
+
+      return (
+        <div className="bg-background border border-border rounded-md p-2 shadow-md">
+          <p className="font-bold">{data.name}</p>
+          <p className="text-sm">{formatCurrency(value)}</p>
+          <p className="text-xs text-muted-foreground">{percentage}% do total</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -201,8 +277,64 @@ export default function BondsPage() {
                   </SelectContent>
                 </Select>
 
-                {/* TODO: Implementar o gráfico de composição da carteira de acordo com o chartType */}
+                <div className="mt-4 max-h-full">
+                  {chartData.byType.length > 0 || chartData.byWallet.length > 0 ? (
+                    <>
+                      <ChartContainer
+                        config={Object.fromEntries(
+                          (chartType === "by-type" ? chartData.byType : chartData.byWallet).map(
+                            (item) => [
+                              item.name,
+                              {
+                                label: item.name,
+                                color: item.color,
+                              },
+                            ]
+                          )
+                        )}
+                      >
+                        <PieChart>
+                          <Pie
+                            data={chartType === "by-type" ? chartData.byType : chartData.byWallet}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                          >
+                            {(chartType === "by-type" ? chartData.byType : chartData.byWallet).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <ChartTooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ChartContainer>
 
+                      <div className="w-full flex flex-col items-center justify-center gap-2 mt-4">
+                        {(chartType === "by-type" ? chartData.byType : chartData.byWallet)
+                          .filter((entry, index, self) =>
+                            index === self.findIndex((t) => t.name === entry.name)
+                          )
+                          .map((entry, index) => (
+                            <div
+                              key={`${entry.name}-${index}`}
+                              className="w-full flex items-center justify-between gap-2 bg-muted rounded-lg px-6 py-3 shadow-sm border border-border"
+                            >
+                              <Label className="text-sm font-bold flex items-center gap-2">
+                                <div className="size-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                                {entry.name}
+                              </Label>
+                              <Label className="text-sm font-bold">{formatCurrency(entry.value)}</Label>
+                            </div>
+                          ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <Label className="text-sm text-muted-foreground">Sem dados para exibir</Label>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -419,9 +551,11 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "tot
               </Label>
             </div>
           </div>
-          <div className="w-full flex items-center justify-center mt-2">
-            <Label className="text-xs text-muted-foreground">{bond.description}</Label>
-          </div>
+          {bond.description && (
+            <div className="w-full flex items-center justify-center mt-2">
+              <Label className="text-xs text-muted-foreground">{bond.description}</Label>
+            </div>
+          )}
         </div>
       </Link>
     ))
