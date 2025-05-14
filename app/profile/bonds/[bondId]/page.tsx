@@ -20,6 +20,9 @@ import axios from "axios";
 import { toast } from "sonner";
 import { getMe } from "@/lib/getMe";
 import { AlertDialog, AlertDialogTitle, AlertDialogHeader, AlertDialogContent, AlertDialogTrigger, AlertDialogCancel, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import { TooltipProps } from "recharts";
 
 // Schema para adicionar uma transação
 const addTransactionSchema = z.object({
@@ -72,11 +75,18 @@ export default function BondPage() {
 
     const [isEditingBond, setIsEditingBond] = useState(false);
     const [wallets, setWallets] = useState<Wallet[]>([]);
+    const [chartData, setChartData] = useState<Array<{ month: string, value: number }>>([]);
 
     useEffect(() => {
         fetchBond();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bondId])
+
+    useEffect(() => {
+        if (bond) {
+            setChartData(calculateChartData(bond));
+        }
+    }, [bond]);
 
     const fetchBond = async () => {
         setIsFetching(true);
@@ -121,9 +131,83 @@ export default function BondPage() {
             toast.error("Erro ao adicionar transação");
         } finally {
             setIsLoading(false);
-
         }
     }
+
+    const calculateChartData = (bond: Bond) => {
+        if (!bond || !bond.transactions || bond.transactions.length === 0) {
+            return [];
+        }
+
+        // Ordenar transações por data
+        const sortedTransactions = [...bond.transactions].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        
+        // Obter a data da primeira e última transação
+        const firstTransactionDate = new Date(sortedTransactions[0].date);
+        const today = new Date();
+        
+        // Criar um mapa para rastrear o valor por mês
+        const monthlyValues: Record<string, number> = {};
+        
+        // Valor inicial
+        let currentValue = 0;
+        
+        // Processar transações e calcular valores mensais
+        for (const transaction of sortedTransactions) {
+            const date = new Date(transaction.date);
+            // Chave única para cada mês (YYYY-MM)
+            const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+            
+            // Atualizar o valor atual com base no tipo de transação
+            if (transaction.type === "INVESTMENT") {
+                currentValue += transaction.transactionValue;
+            } else if (transaction.type === "CORRECTION") {
+                currentValue += transaction.transactionValue;
+            } else if (transaction.type === "RESCUE") {
+                currentValue -= transaction.transactionValue;
+            } else if (transaction.type === "LIQUIDATION") {
+                currentValue = transaction.currentValue;
+            }
+            
+            // Armazenar o valor no mês correspondente
+            monthlyValues[monthKey] = currentValue;
+        }
+        
+        // Função para formatar a data em MMM/YYYY
+        const formatMonthYear = (date: Date) => {
+            const monthNames = [
+                "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+                "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+            ];
+            return `${monthNames[date.getMonth()]}/${date.getFullYear().toString().substr(2, 2)}`;
+        };
+        
+        // Criar array de meses desde a primeira transação até hoje
+        const result = [];
+        let lastValue = 0;
+        const currentDate = new Date(firstTransactionDate);
+        currentDate.setDate(1); // Primeiro dia do mês
+        
+        while (currentDate <= today) {
+            const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+            
+            if (monthlyValues[monthKey] !== undefined) {
+                lastValue = monthlyValues[monthKey];
+            }
+            
+            result.push({
+                month: formatMonthYear(currentDate),
+                value: lastValue
+            });
+            
+            // Avançar para o próximo mês
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        
+        return result;
+    };
 
     // Função para abrir o dialog de adição de transação
     const openNewTransactionDialog = () => {
@@ -156,17 +240,6 @@ export default function BondPage() {
         }
     }
 
-    // Funcao para abrir o dialog de edicao de ativo
-    const openEditBondDialog = () => {
-        setIsEditingBond(true);
-        editBondForm.reset({
-            name: bond?.name ?? "",
-            description: bond?.description ?? "",
-            type: bond?.type ?? "",
-            walletId: bond?.walletId ?? "",
-        });
-    }
-
     // Função para deletar um ativo
     const handleDeleteBond = async () => {
         try {
@@ -197,6 +270,30 @@ export default function BondPage() {
             console.error(error);
             toast.error("Erro ao deletar transação");
         }
+    }
+
+    const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+        if (active && payload && payload.length > 0) {
+            const data = payload[0].payload;
+            return (
+                <div className="bg-background border border-border rounded-md p-2 shadow-md">
+                    <p className="font-bold">Patrimônio em {data.month}</p>
+                    <p className="text-sm">{formatCurrency(data.value)}</p>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    // Funcao para abrir o dialog de edicao de ativo
+    const openEditBondDialog = () => {
+        setIsEditingBond(true);
+        editBondForm.reset({
+            name: bond?.name ?? "",
+            description: bond?.description ?? "",
+            type: bond?.type ?? "",
+            walletId: bond?.walletId ?? "",
+        });
     }
 
     if (isFetching || !bond) {
@@ -268,21 +365,51 @@ export default function BondPage() {
                                 <CardTitle>Rendimento</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <Label className="text-xl font-bold">{formatCurrency(calculateBondTotals(bond).profit)}</Label>
+                                <Label className="text-xl font-bold">{formatCurrency(calculateBondTotals(bond).profit)} <span className="text-sm text-muted-foreground">({formatPercentage(calculateBondTotals(bond).profitPercentage / 100)})</span></Label>
                             </CardContent>
                             <CardFooter>
-                                <Label className="text-xs font-medium text-muted-foreground">{calculateBondTotals(bond).irrMonthly ? `Rentabilidade efetiva de ${formatPercentage(calculateBondTotals(bond).irrMonthly as number)} a.m.` : "Rentabilidade total de " + (calculateBondTotals(bond).profitPercentage.toFixed(2) + "%")}</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">{calculateBondTotals(bond).irrMonthly ? `Rentabilidade efetiva de ${formatPercentage(calculateBondTotals(bond).irrMonthly as number)} a.m.` : "Rentabilidade mesnal de " + (calculateBondTotals(bond).profitPercentageMonthly.toFixed(2) + "% a.m.")}</Label>
                             </CardFooter>
                         </Card>
                     </div>
 
                     {/* Chart */}
-                    <Card className="w-full h-max">
-                        <CardHeader>
+                    <Card className="w-full h-max mt-4">
+                        <CardHeader className="flex items-center justify-between">
                             <CardTitle>Evolução do patrimônio</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {/* TODO: Implementar o gráfico de linha de evolução do patrimônio ao longo do tempo de acordo com as datas das transações */}
+                            <ChartContainer
+                                className="w-full h-80"
+                                config={{
+                                    patrimonio: {
+                                        theme: {
+                                            light: "#3b82f6",
+                                            dark: "#60a5fa"
+                                        },
+                                        label: "Patrimônio"
+                                    }
+                                }}
+                            >
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis 
+                                        dataKey="month"
+                                        tick={{ fontSize: 12 }}
+                                        interval="preserveStartEnd"
+                                    />
+                                    <ChartTooltip
+                                        content={<CustomTooltip />}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="value"
+                                        strokeWidth={2}
+                                        activeDot={{ r: 6 }}
+                                        name="patrimonio"
+                                    />
+                                </LineChart>
+                            </ChartContainer>
                         </CardContent>
                     </Card>
                 </div>
