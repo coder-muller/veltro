@@ -102,6 +102,7 @@ export default function BondPage() {
         }
     };
 
+    // Função para adicionar uma transação
     const handleAddTransaction = async (data: z.infer<typeof addTransactionSchema>) => {
         setIsLoading(true);
         try {
@@ -124,6 +125,7 @@ export default function BondPage() {
         }
     }
 
+    // Função para abrir o dialog de adição de transação
     const openNewTransactionDialog = () => {
         setIsAddingTransaction(true);
         newTransactionForm.reset({
@@ -178,6 +180,22 @@ export default function BondPage() {
         } catch (error) {
             console.error(error);
             toast.error("Erro ao deletar ativo");
+        }
+    }
+
+    // Funcao para deletar uma transação
+    const handleDeleteTransaction = async (transactionId: string) => {
+        try {
+            const response = await axios.delete(`/api/transactions/${bondId}`, { data: { id: transactionId } });
+            if (response.status === 200) {
+                toast.success("Transação deletada com sucesso");
+                fetchBond();
+            } else {
+                toast.error("Erro ao deletar transação");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao deletar transação");
         }
     }
 
@@ -276,22 +294,42 @@ export default function BondPage() {
                         <CardDescription>Aqui você pode ver todas as transações do seu ativo.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="w-full flex flex-col items-center justify-center gap-2">
-                            {bond?.transactions
-                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                .map((transaction) => (
-                                    <div key={transaction.id} className="w-full flex items-start justify-between gap-2 border bg-muted rounded-lg p-4 cursor-pointer hover:bg-muted-foreground/10 transition-colors duration-200">
-                                        <div className="w-full flex flex-col items-start justify-center">
-                                            <Label className="text-sm font-bold">{new Date(transaction.date).toLocaleDateString('pt-BR')}</Label>
-                                            <Label className="text-xs font-medium text-muted-foreground">{transaction.type === "INVESTMENT" ? "Investimento" : transaction.type === "LIQUIDATION" ? "Liquidação" : transaction.type === "RESCUE" ? "Resgate" : "Correção"}</Label>
-                                        </div>
-                                        <div className="w-full flex flex-col items-end justify-between">
-                                            <Label className="text-sm font-bold">{formatCurrency(transaction.currentValue)}</Label>
-                                            <Label className="text-xs font-medium text-muted-foreground">{transaction.type === "INVESTMENT" ? "+" : transaction.type === "RESCUE" ? "-" : ""} {formatCurrency(transaction.transactionValue)}</Label>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
+                        {bond?.transactions.length === 0 && (
+                            <div className="w-full flex flex-col items-center justify-center gap-2">
+                                <Label className="text-sm font-medium text-muted-foreground">Nenhuma transação encontrada</Label>
+                            </div>
+                        )}
+                        {bond?.transactions.length > 0 && (
+                            <div className="w-full flex flex-col items-center justify-center gap-2">
+                                {bond?.transactions
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map((transaction) => (
+                                        <AlertDialog key={transaction.id}>
+                                            <AlertDialogTrigger asChild>
+                                                <div className="w-full flex items-start justify-between gap-2 border bg-muted rounded-lg p-4 cursor-pointer hover:bg-muted-foreground/10 transition-colors duration-200">
+                                                    <div className="w-full flex flex-col items-start justify-center">
+                                                        <Label className="text-sm font-bold">{new Date(transaction.date).toLocaleDateString('pt-BR')}</Label>
+                                                        <Label className="text-xs font-medium text-muted-foreground">{transaction.type === "INVESTMENT" ? "Investimento" : transaction.type === "LIQUIDATION" ? "Liquidação" : transaction.type === "RESCUE" ? "Resgate" : "Correção"}</Label>
+                                                    </div>
+                                                    <div className="w-full flex flex-col items-end justify-between">
+                                                        <Label className="text-sm font-bold">{formatCurrency(transaction.currentValue)}</Label>
+                                                        <Label className="text-xs font-medium text-muted-foreground">{transaction.type === "INVESTMENT" ? "+" : transaction.type === "RESCUE" ? "-" : ""} {formatCurrency(transaction.transactionValue)}</Label>
+                                                    </div>
+                                                </div>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Tem certeza que deseja deletar a transação?</AlertDialogTitle>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteTransaction(transaction.id)} disabled={isLoading}>Deletar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

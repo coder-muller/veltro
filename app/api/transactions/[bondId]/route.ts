@@ -75,7 +75,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             },
         });
 
-        return NextResponse.json(transaction);
+        return NextResponse.json(transaction, { status: 200 });
     } catch (error) {
         console.error(error);
         return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
