@@ -22,6 +22,7 @@ import axios from "axios";
 import { getMe } from "@/lib/getMe";
 import { calculateBondTotals } from "@/lib/bondsCalculations";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 // Schema para novo papel
 const newBondSchema = z.object({
@@ -367,48 +368,52 @@ export default function BondsPage() {
 function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "total") {
   return (
     bonds.map((bond) => (
-      <div key={bond.id} className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer">
-        <div className="w-full flex items-center justify-between">
-          <Label className="text-sm font-bold flex items-center gap-2">
-            {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
-          </Label>
-          <Label className="text-sm font-bold flex items-center gap-2">
-            {formatCurrency(calculateBondTotals(bond).currentValue)}
-          </Label>
-        </div>
-        <div className="w-full grid grid-cols-4 gap-2">
-          <div className="flex flex-col items-center justify-center">
-            <Label className="text-xs text-muted-foreground">Data de compra</Label>
-            <Label className="text-sm font-bold">{new Date(bond.buyDate).toLocaleDateString('pt-BR')}</Label>
-          </div>
-          <div className="flex flex-col items-center justify-center">
-            <Label className="text-xs text-muted-foreground">Data de vencimento</Label>
-            <Label className="text-sm font-bold">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}</Label>
-          </div>
-          <div className="flex flex-col items-center justify-center">
-            <Label className="text-xs text-muted-foreground">Valor investido</Label>
-            <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).totalInvested)}</Label>
-          </div>
-          <div className="flex flex-col items-center justify-center">
-            <Label className="text-xs text-muted-foreground">Rendimento</Label>
-            <Label className="text-sm font-bold">
-              {formatCurrency(calculateBondTotals(bond).profit)}{""}
-              <span className="text-xs text-muted-foreground">
-                (
-                {rentabilityType === "monthly"
-                  ? formatPercentage(calculateBondTotals(bond).irrMonthly as number)
-                  : rentabilityType === "yearly"
-                    ? formatPercentage(calculateBondTotals(bond).irrAnnual as number)
-                    : formatPercentage(calculateBondTotals(bond).profitPercentage / 100)}
-                )
-              </span>
+      <Link href={`/profile/bonds/${bond.id}`} key={bond.id}>
+        <div
+          className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
+        >
+          <div className="w-full flex items-center justify-between">
+            <Label className="text-sm font-bold flex items-center gap-2">
+              {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
+            </Label>
+            <Label className="text-sm font-bold flex items-center gap-2">
+              {formatCurrency(calculateBondTotals(bond).currentValue)}
             </Label>
           </div>
+          <div className="w-full grid grid-cols-4 gap-2">
+            <div className="flex flex-col items-center justify-center">
+              <Label className="text-xs text-muted-foreground">Data de compra</Label>
+              <Label className="text-sm font-bold">{new Date(bond.buyDate).toLocaleDateString('pt-BR')}</Label>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <Label className="text-xs text-muted-foreground">Data de vencimento</Label>
+              <Label className="text-sm font-bold">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}</Label>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <Label className="text-xs text-muted-foreground">Valor investido</Label>
+              <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).totalInvested)}</Label>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <Label className="text-xs text-muted-foreground">Rendimento</Label>
+              <Label className="text-sm font-bold">
+                {formatCurrency(calculateBondTotals(bond).profit)}{""}
+                <span className="text-xs text-muted-foreground">
+                  (
+                  {rentabilityType === "monthly"
+                    ? formatPercentage(calculateBondTotals(bond).irrMonthly as number)
+                    : rentabilityType === "yearly"
+                      ? formatPercentage(calculateBondTotals(bond).irrAnnual as number)
+                      : formatPercentage(calculateBondTotals(bond).profitPercentage / 100)}
+                  )
+                </span>
+              </Label>
+            </div>
+          </div>
+          <div className="w-full flex items-center justify-center mt-2">
+            <Label className="text-xs text-muted-foreground">{bond.description}</Label>
+          </div>
         </div>
-        <div className="w-full flex items-center justify-center mt-2">
-          <Label className="text-xs text-muted-foreground">{bond.description}</Label>
-        </div>
-      </div>
+      </Link>
     ))
   );
 }
