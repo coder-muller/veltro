@@ -227,7 +227,7 @@ export default function BondsPage() {
               </CardHeader>
               <CardContent>
                 <div className="w-full flex flex-col gap-2">
-                  {renderBonds(bonds, rentabilityType)}
+                  {renderBonds(bonds.filter((bond) => bond.name.toLowerCase().includes(search.toLowerCase()) || bond.type.toLowerCase().includes(search.toLowerCase())), rentabilityType)}
                 </div>
               </CardContent>
             </Card>
@@ -387,7 +387,17 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "tot
             </div>
             <div className="flex flex-col items-center justify-center">
               <Label className="text-xs text-muted-foreground">Data de vencimento</Label>
-              <Label className="text-sm font-bold">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}</Label>
+              <Label className={`text-sm font-bold ${bond.expirationDate ?
+                new Date(bond.expirationDate).getMonth() === new Date().getMonth() &&
+                  new Date(bond.expirationDate).getFullYear() === new Date().getFullYear() ?
+                  "text-orange-500" :
+                  new Date(bond.expirationDate) < new Date() ?
+                    "text-red-500" :
+                    ""
+                : ""
+                }`}>
+                {bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}
+              </Label>
             </div>
             <div className="flex flex-col items-center justify-center">
               <Label className="text-xs text-muted-foreground">Valor investido</Label>

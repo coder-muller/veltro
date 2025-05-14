@@ -23,7 +23,9 @@ export const calculateBondTotals = (bond: Bond): {
 
     const cashFlow: { amount: number, when: Date }[] = [];
 
-    for (const transaction of bond.transactions) {
+    const sortedTransactions = bond.transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    for (const transaction of sortedTransactions) {
 
         const date = new Date(transaction.date);
 
