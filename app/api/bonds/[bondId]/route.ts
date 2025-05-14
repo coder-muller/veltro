@@ -29,3 +29,36 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(bond);
 }
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ bondId: string }> }) {
+    const { bondId } = await params;
+
+    const { name, description, type, walletId } = await request.json();
+
+    try {
+        const bond = await prisma.bond.update({
+            where: { id: bondId },
+            data: { name, description, type, walletId },
+        });
+
+        return NextResponse.json(bond, { status: 200 });
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ error: "Bond not found" }, { status: 404 });
+    }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ bondId: string }> }) {
+    const { bondId } = await params;
+
+    try {
+        const bond = await prisma.bond.delete({
+            where: { id: bondId },
+        });
+
+        return NextResponse.json(bond, { status: 200 });
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ error: "Bond not found" }, { status: 404 });
+    }
+}

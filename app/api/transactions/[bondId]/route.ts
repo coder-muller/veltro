@@ -52,3 +52,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(transaction);
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ bondId: string }> }) {
+    const { bondId } = await params;
+
+    const bond = await prisma.bond.findUnique({
+        where: {
+            id: bondId,
+        },
+    }) as Bond | null;
+
+    if (!bond) {
+        return NextResponse.json({ error: "Bond not found" }, { status: 404 });
+    }
+
+    const { id } = await request.json();
+
+    try {
+        const transaction = await prisma.transaction.delete({
+            where: {
+                id,
+            },
+        });
+
+        return NextResponse.json(transaction);
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    }
+}
