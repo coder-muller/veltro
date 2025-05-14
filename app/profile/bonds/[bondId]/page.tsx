@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Pencil, Plus } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Bond } from "@/lib/types";
+import { Bond, Wallet } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { useForm } from "react-hook-form";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import axios from "axios";
 import { toast } from "sonner";
+import { getMe } from "@/lib/getMe";
+import { AlertDialog, AlertDialogTitle, AlertDialogHeader, AlertDialogContent, AlertDialogTrigger, AlertDialogCancel, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 // Schema para adicionar uma transação
 const addTransactionSchema = z.object({
@@ -27,6 +29,14 @@ const addTransactionSchema = z.object({
         const number = Number(value.replace(",", "."));
         return !isNaN(number) && number > 0;
     }, { message: "Valor inválido" }),
+});
+
+// Schema para editar um ativo
+const editBondSchema = z.object({
+    name: z.string().min(1, { message: "Nome é obrigatório" }),
+    description: z.string().min(1, { message: "Descrição é obrigatória" }),
+    type: z.string().min(1, { message: "Tipo é obrigatório" }),
+    walletId: z.string().min(1, { message: "Carteira é obrigatória" }),
 });
 
 export default function BondPage() {
@@ -41,6 +51,17 @@ export default function BondPage() {
         },
     });
 
+    // UseForm para editar um ativo
+    const editBondForm = useForm<z.infer<typeof editBondSchema>>({
+        resolver: zodResolver(editBondSchema),
+        defaultValues: {
+            name: "",
+            description: "",
+            type: "",
+            walletId: "",
+        },
+    });
+
     const { bondId } = useParams();
     const router = useRouter();
 
@@ -49,6 +70,9 @@ export default function BondPage() {
     const [isAddingTransaction, setIsAddingTransaction] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const [isEditingBond, setIsEditingBond] = useState(false);
+    const [wallets, setWallets] = useState<Wallet[]>([]);
+
     useEffect(() => {
         fetchBond();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,10 +80,21 @@ export default function BondPage() {
 
     const fetchBond = async () => {
         setIsFetching(true);
+
+        const me = await getMe();
+
+        if (!me) {
+            toast.error("Erro ao obter o usuário");
+            return;
+        }
+
         try {
             const response = await fetch(`/api/bonds/${bondId}`);
+            const walletsResponse = await fetch(`/api/wallets/${me.userId}`);
             const data = await response.json();
+            const walletsData = await walletsResponse.json();
             setBond(data);
+            setWallets(walletsData);
         } catch (error) {
             console.error(error);
         } finally {
@@ -98,6 +133,54 @@ export default function BondPage() {
         });
     }
 
+    // Função para editar um ativo
+    const handleEditBond = async (data: z.infer<typeof editBondSchema>) => {
+        setIsLoading(true);
+        try {
+            const response = await axios.put(`/api/bonds/${bondId}`, data);
+
+            if (response.status === 200) {
+                toast.success("Ativo editado com sucesso!");
+                setIsEditingBond(false);
+                fetchBond();
+            } else {
+                toast.error("Erro ao editar ativo");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao editar ativo");
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    // Funcao para abrir o dialog de edicao de ativo
+    const openEditBondDialog = () => {
+        setIsEditingBond(true);
+        editBondForm.reset({
+            name: bond?.name ?? "",
+            description: bond?.description ?? "",
+            type: bond?.type ?? "",
+            walletId: bond?.walletId ?? "",
+        });
+    }
+
+    // Função para deletar um ativo
+    const handleDeleteBond = async () => {
+        try {
+            const response = await axios.delete(`/api/bonds/${bond?.id}`);
+            if (response.status === 200) {
+                toast.success("Ativo deletado com sucesso");
+                router.push("/profile/bonds");
+            } else {
+                toast.error("Erro ao deletar ativo");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao deletar ativo");
+        }
+    }
+
     if (isFetching || !bond) {
         return (
             <div className="w-full flex flex-col items-center justify-center py-6">
@@ -119,7 +202,7 @@ export default function BondPage() {
                     <Label className="text-xl font-bold flex items-center gap-2">{bond?.type} {bond?.name} <span className="text-sm text-muted-foreground">{bond?.wallet.name}</span></Label>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => { }}>
+                    <Button variant="outline" onClick={openEditBondDialog}>
                         <Pencil className="size-4" />
                         Editar Ativo
                     </Button>
@@ -286,6 +369,108 @@ export default function BondPage() {
                 </DialogContent>
             </Dialog>
 
+            {/* Dialog para editar um ativo */}
+            <Dialog open={isEditingBond} onOpenChange={setIsEditingBond}>
+                <DialogContent className="min-w-xl w-full">
+                    <DialogHeader>
+                        <DialogTitle>Editar Ativo</DialogTitle>
+                        <DialogDescription>Edite as informações do seu ativo.</DialogDescription>
+                    </DialogHeader>
+                    <Form {...editBondForm}>
+                        <form onSubmit={editBondForm.handleSubmit(handleEditBond)} className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                                <FormField
+                                    control={editBondForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Nome</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={editBondForm.control}
+                                    name="type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <FormField
+                                    control={editBondForm.control}
+                                    name="walletId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Carteira</FormLabel>
+                                            <FormControl>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Selecione" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {wallets.map((wallet) => (
+                                                            <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={editBondForm.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Descrição</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} disabled={isLoading} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <DialogFooter className="mt-4">
+                                <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Editar"}
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={isLoading}>
+                                            Deletar
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Tem certeza que deseja deletar o ativo?</AlertDialogTitle>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteBond()} disabled={isLoading}>Deletar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                                <DialogClose asChild>
+                                    <Button variant="outline" type="button" disabled={isLoading}>Cancelar</Button>
+                                </DialogClose>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

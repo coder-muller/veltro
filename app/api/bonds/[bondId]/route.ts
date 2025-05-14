@@ -24,6 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
 
     if (!bond) {
+        console.log("Bond not found");
         return NextResponse.json({ error: "Bond not found" }, { status: 404 });
     }
 

@@ -184,22 +184,6 @@ export default function BondsPage() {
     }
   }
 
-  // Função para deletar uma transação
-  const onDelete = async (bondId: string) => {
-    try {
-      const response = await axios.delete(`/api/bonds/${bondId}`);
-      if (response.status === 200) {
-        toast.success("Ativo deletado com sucesso");
-        fetchData();
-      } else {
-        toast.error("Erro ao deletar ativo");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao deletar ativo");
-    }
-  }
-
   // Função para abrir a Dialog de adição de ativos
   const openDialog = () => {
     form.reset({
@@ -272,7 +256,7 @@ export default function BondsPage() {
             </div>
             <div className="w-full flex items-center justify-between bg-muted rounded-lg px-6 py-3 shadow-sm border border-border">
               <Label className="text-sm font-medium">Rendimento</Label>
-              <Label className="text-sm font-bold">{formatCurrency(totals.profit)} <span className="text-xs text-muted-foreground">({formatPercentage(totals.profit / totals.investedValue)})</span></Label>
+              <Label className="text-sm font-bold">{formatCurrency(totals.profit)} <span className="text-xs text-muted-foreground">({formatPercentage(totals.investedValue > 0 ? totals.profit / totals.investedValue : 0)})</span></Label>
             </div>
           </div>
 
@@ -375,7 +359,7 @@ export default function BondsPage() {
               </CardHeader>
               <CardContent>
                 <div className="w-full flex flex-col gap-2">
-                  {renderBonds(bonds.filter((bond) => bond.name.toLowerCase().includes(search.toLowerCase()) || bond.type.toLowerCase().includes(search.toLowerCase())), rentabilityType, onDelete)}
+                  {renderBonds(bonds.filter((bond) => bond.name.toLowerCase().includes(search.toLowerCase()) || bond.type.toLowerCase().includes(search.toLowerCase())), rentabilityType)}
                 </div>
               </CardContent>
             </Card>
@@ -513,13 +497,12 @@ export default function BondsPage() {
   );
 }
 
-function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "total", onDelete: (bondId: string) => void) {
+function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "total") {
   return (
     bonds.map((bond) => (
       <Link href={`/profile/bonds/${bond.id}`} key={bond.id}>
         <div
           className="w-full flex flex-col items-center justify-center gap-2 bg-muted rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer"
-          onClick={() => onDelete(bond.id)}
         >
           <div className="w-full flex items-center justify-between">
             <Label className="text-sm font-bold flex items-center gap-2">
