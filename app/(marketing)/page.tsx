@@ -209,8 +209,8 @@ export default function Home() {
                             </div>
                             <div className="flex flex-col items-center">
                                 <h3 className="text-xl font-bold">Renda Fixa</h3>
-                                <span className="text-xs px-2 py-1 bg-amber-500/10 text-amber-500 rounded-full mt-1 font-medium">
-                                    Em desenvolvimento
+                                <span className="text-xs px-2 py-1 bg-green-500/10 text-green-500 rounded-full mt-1 font-medium">
+                                    Disponível
                                 </span>
                             </div>
                             <p className="text-sm text-muted-foreground text-center">
@@ -219,16 +219,16 @@ export default function Home() {
                             <div className="w-full pt-2">
                                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                     <motion.div
-                                        className="h-full bg-amber-500"
+                                        className="h-full bg-green-500"
                                         initial={{ width: 0 }}
-                                        whileInView={{ width: "70%" }}
+                                        whileInView={{ width: "100%" }}
                                         transition={{ duration: 1.2, ease: "easeOut" }}
                                         viewport={{ once: true }}
                                     />
                                 </div>
                                 <div className="flex justify-between items-center mt-1 text-xs text-muted-foreground">
                                     <span>Progresso</span>
-                                    <span>70%</span>
+                                    <span>100%</span>
                                 </div>
                             </div>
                         </motion.div>

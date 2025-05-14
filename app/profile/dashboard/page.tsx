@@ -27,7 +27,7 @@ export default function Dashboard() {
       title: "Renda Fixa",
       description: "Acompanhe seus investimentos em títulos e CDBs",
       icon: Building,
-      available: false,
+      available: true,
       route: "/profile/bonds"
     },
     {
