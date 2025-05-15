@@ -230,7 +230,7 @@ export default function BondsPage() {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground size-5" />
             <Input placeholder="Pesquisar" className="pl-8 w-full md:w-auto" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Button variant="default" onClick={openDialog} className="">
+          <Button variant="default" onClick={openDialog} disabled={isLoading || isFetching || wallets.length === 0}>
             <Plus className="size-4" />
             Adicionar Ativo
           </Button>
