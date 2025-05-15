@@ -230,7 +230,7 @@ export default function BondsPage() {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground size-5" />
             <Input placeholder="Pesquisar" className="pl-8 w-full md:w-auto" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Button variant="default" onClick={openDialog} className="hidden md:block">
+          <Button variant="default" onClick={openDialog} className="">
             <Plus className="size-4" />
             Adicionar Ativo
           </Button>
@@ -260,7 +260,7 @@ export default function BondsPage() {
             </div>
           </div>
 
-          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-center justify-center">
+          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-start justify-center">
             {/* Chart Card */}
             <Card className="h-max w-full">
               <CardHeader>
