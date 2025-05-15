@@ -13,7 +13,7 @@ import { ModeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { useEffect } from "react";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -25,6 +25,7 @@ const formSchema = z.object({
 export default function Login() {
 
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const router = useRouter();
 
@@ -49,6 +50,7 @@ export default function Login() {
     }, [router]);
 
     const handleLogin = async (data: z.infer<typeof formSchema>) => {
+        setIsLoading(true);
         try {
             const response: AxiosResponse<{ message: string }> = await axios.post("/api/auth", {
                 email: data.email,
@@ -71,6 +73,8 @@ export default function Login() {
                     toast.error("Erro ao fazer login");
                 }
             }
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -128,7 +132,9 @@ export default function Login() {
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit" className="w-full mt-2">Login</Button>
+                            <Button type="submit" className="w-full mt-2" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="animate-spin" /> : "Login"}
+                            </Button>
                         </form>
                     </Form>
                     <div className="text-center text-sm mt-4">
