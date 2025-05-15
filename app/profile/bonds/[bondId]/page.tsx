@@ -308,7 +308,7 @@ export default function BondPage() {
     return (
         <div className="w-full flex flex-col gap-4">
             {/* Header */}
-            <div className="w-full flex items-center justify-between">
+            <div className="w-full flex flex-col md:flex-row items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" onClick={() => router.back()}>
                         <ArrowLeft className="size-4" />
@@ -329,10 +329,10 @@ export default function BondPage() {
             </div>
 
             {/* Content */}
-            <div className="w-full grid grid-cols-3 gap-4">
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Left */}
-                <div className="w-full h-max col-span-2">
-                    <div className="grid grid-cols-3 gap-4 space-y-4">
+                <div className="w-full h-max col-span-1 md:col-span-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:space-y-4">
                         {/* Total Invested */}
                         <Card className="w-full h-max">
                             <CardHeader>
@@ -463,14 +463,14 @@ export default function BondPage() {
 
             {/* Dialog para adicionar uma transação */}
             <Dialog open={isAddingTransaction} onOpenChange={setIsAddingTransaction}>
-                <DialogContent className="min-w-xl w-full">
+                <DialogContent className="min-w-xs w-full md:min-w-xl">
                     <DialogHeader>
                         <DialogTitle>Adicionar Transação</DialogTitle>
                         <DialogDescription>Adicione uma nova transação para o seu ativo.</DialogDescription>
                     </DialogHeader>
                     <Form {...newTransactionForm}>
                         <form onSubmit={newTransactionForm.handleSubmit(handleAddTransaction)} className="space-y-2">
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <FormField
                                     control={newTransactionForm.control}
                                     name="date"
@@ -536,7 +536,7 @@ export default function BondPage() {
 
             {/* Dialog para editar um ativo */}
             <Dialog open={isEditingBond} onOpenChange={setIsEditingBond}>
-                <DialogContent className="min-w-xl w-full">
+                <DialogContent className="min-w-xs w-full md:min-w-xl">
                     <DialogHeader>
                         <DialogTitle>Editar Ativo</DialogTitle>
                         <DialogDescription>Edite as informações do seu ativo.</DialogDescription>
