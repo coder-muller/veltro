@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogTitle, AlertDialogHeader, AlertDialogContent, A
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
 import { TooltipProps } from "recharts";
+import { Badge } from "@/components/ui/badge";
 
 // Schema para adicionar uma transação
 const addTransactionSchema = z.object({
@@ -146,7 +147,7 @@ export default function BondPage() {
 
         // Obter a data da primeira e última transação
         const firstTransactionDate = new Date(sortedTransactions[0].date);
-        const today = new Date();
+        const today = sortedTransactions[sortedTransactions.length - 1].type === "LIQUIDATION" ? new Date(sortedTransactions[sortedTransactions.length - 1].date) : new Date();
 
         // Criar um mapa para rastrear o valor por mês
         const monthlyValues: Record<string, number> = {};
@@ -178,10 +179,10 @@ export default function BondPage() {
         // Função para formatar a data em MMM/YYYY
         const formatMonthYear = (date: Date) => {
             const monthNames = [
-                "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-                "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
             ];
-            return `${monthNames[date.getMonth()]}/${date.getFullYear().toString().substr(2, 2)}`;
+            return `${monthNames[date.getMonth()]} de ${date.getFullYear()}`;
         };
 
         // Criar array de meses desde a primeira transação até hoje
@@ -258,6 +259,18 @@ export default function BondPage() {
 
     // Funcao para deletar uma transação
     const handleDeleteTransaction = async (transactionId: string) => {
+
+        if (!bond) {
+            toast.error("Ativo não encontrado");
+            return;
+        }
+
+        const sortedTransactions = [...bond.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (sortedTransactions[0].id !== transactionId) {
+            toast.error("Você deve deletar as transações na ordem cronológica");
+            return;
+        }
+
         try {
             const response = await axios.delete(`/api/transactions/${bondId}`, { data: { id: transactionId } });
             if (response.status === 200) {
@@ -314,14 +327,19 @@ export default function BondPage() {
                         <ArrowLeft className="size-4" />
                         Voltar
                     </Button>
-                    <Label className="text-xl font-bold flex items-center gap-2">{bond?.type} {bond?.name} <span className="text-sm text-muted-foreground">{bond?.wallet.name}</span></Label>
+                    <Label className="text-xl font-bold flex items-center gap-2">
+                        {bond?.type} {bond?.name} <span className="text-sm text-muted-foreground">{bond?.wallet.name}</span>
+                        {calculateBondTotals(bond).isLiquidated && (
+                            <Badge variant="default" className="text-sm">Liquidado</Badge>
+                        )}
+                    </Label>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={openEditBondDialog}>
                         <Pencil className="size-4" />
                         Editar Ativo
                     </Button>
-                    <Button variant="default" onClick={openNewTransactionDialog}>
+                    <Button variant="default" onClick={openNewTransactionDialog} disabled={calculateBondTotals(bond).isLiquidated}>
                         <Plus className="size-4" />
                         Adicionar Transação
                     </Button>
@@ -329,7 +347,7 @@ export default function BondPage() {
             </div>
 
             {/* Content */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`w-full grid grid-cols-1 md:grid-cols-3 gap-4 ${calculateBondTotals(bond).isLiquidated ? 'opacity-90' : ''}`}>
                 {/* Left */}
                 <div className="w-full h-max col-span-1 md:col-span-2">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:space-y-4">
@@ -349,13 +367,17 @@ export default function BondPage() {
                         {/* Current Value */}
                         <Card className="w-full h-max">
                             <CardHeader>
-                                <CardTitle>Posição Atual</CardTitle>
+                                <CardTitle>Posição {calculateBondTotals(bond).isLiquidated ? "Liquidada" : "Atual"}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Label className="text-xl font-bold">{formatCurrency(calculateBondTotals(bond).currentValue)}</Label>
                             </CardContent>
                             <CardFooter>
-                                <Label className="text-xs font-medium text-muted-foreground">{calculateBondTotals(bond).totalRescued > 0 ? `${formatCurrency(calculateBondTotals(bond).totalRescued)} já foram resgatados` : "Posição atual do seu ativo"}</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">
+                                    {calculateBondTotals(bond).totalRescued > 0 ?
+                                        `${formatCurrency(calculateBondTotals(bond).totalRescued)} ${calculateBondTotals(bond).totalRescued === 1 ? "já foi resgatado" : "foram resgatados"}` :
+                                        "Posição atual do seu ativo"}
+                                </Label>
                             </CardFooter>
                         </Card>
 
@@ -368,7 +390,7 @@ export default function BondPage() {
                                 <Label className="text-xl font-bold">{formatCurrency(calculateBondTotals(bond).profit)} <span className="text-sm text-muted-foreground">({formatPercentage(calculateBondTotals(bond).profitPercentage)})</span></Label>
                             </CardContent>
                             <CardFooter>
-                                <Label className="text-xs font-medium text-muted-foreground">Rentabilidade de {formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)} a.m.</Label>
+                                <Label className="text-xs font-medium text-muted-foreground">Rentabilidade média de {formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)} a.m.</Label>
                             </CardFooter>
                         </Card>
                     </div>
@@ -397,6 +419,9 @@ export default function BondPage() {
                                         dataKey="month"
                                         tick={{ fontSize: 12 }}
                                         interval="preserveStartEnd"
+                                        tickFormatter={(value) => {
+                                            return value.split(" de ")[0].slice(0, 3) + "/" + value.split(" de ")[1].slice(2);
+                                        }}
                                     />
                                     <ChartTooltip
                                         content={<CustomTooltip />}
@@ -417,7 +442,12 @@ export default function BondPage() {
                 {/* Right */}
                 <Card className="w-full h-max">
                     <CardHeader>
-                        <CardTitle>Transações</CardTitle>
+                        <CardTitle className="flex items-center justify-between">
+                            Transações
+                            {calculateBondTotals(bond).isLiquidated && (
+                                <span className="text-xs bg-muted-foreground/10 text-muted-foreground px-2 py-1 rounded-md">Liquidado</span>
+                            )}
+                        </CardTitle>
                         <CardDescription>Aqui você pode ver todas as transações do seu ativo.</CardDescription>
                     </CardHeader>
                     <CardContent>
