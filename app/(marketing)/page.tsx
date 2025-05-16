@@ -34,7 +34,7 @@ export default function Home() {
                     : "bg-transparent"
                     }`}
             >
-                <div className="container flex items-center justify-between h-16 px-4 md:px-6">
+                <div className="container flex items-center justify-between h-16 px-4 md:px-6 mx-auto">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -69,7 +69,7 @@ export default function Home() {
 
             {/* Hero Section */}
             <section className="w-full pt-28 md:pt-32 lg:pt-36 xl:pt-40 pb-12 md:pb-24 bg-background">
-                <div className="container px-4 md:px-6 m-auto">
+                <div className="container px-4 md:px-6 mx-auto">
                     <div className="flex flex-col items-center justify-center gap-6">
                         <motion.div
                             initial="hidden"
@@ -148,7 +148,7 @@ export default function Home() {
                 transition={{ duration: 0.7 }}
                 className="w-full py-16 md:py-24 lg:py-32 bg-muted/30"
             >
-                <div className="container px-4 md:px-6 m-auto">
+                <div className="container px-4 md:px-6 mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -244,7 +244,7 @@ export default function Home() {
                 transition={{ duration: 0.7 }}
                 className="w-full py-16 md:py-24 lg:py-32 bg-background"
             >
-                <div className="container px-4 md:px-6 m-auto">
+                <div className="container px-4 md:px-6 mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}

@@ -78,6 +78,7 @@ export default function BondsPage() {
 
   useEffect(() => {
     calculateTotals(bonds);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bonds, showOnlyActiveBonds]);
 
   // Função para buscar os ativos
