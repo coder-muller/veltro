@@ -64,7 +64,7 @@ export default function BondsPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [totals, setTotals] = useState({ investedValue: 0, currentValue: 0, profit: 0 });
-  const [rentabilityType, setRentabilityType] = useState<"monthly" | "yearly" | "total" | "monthly-accumulated">("monthly-accumulated");
+  const [rentabilityType, setRentabilityType] = useState<"monthly" | "total">("monthly");
   const [chartData, setChartData] = useState<{ byWallet: { name: string, value: number, color: string, type: string }[], byType: { name: string, value: number, color: string, type: string }[] }>({ byWallet: [], byType: [] });
 
   // Busca os ativos quando o componente for montado
@@ -346,14 +346,12 @@ export default function BondsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="text-xs dark:bg-muted">
-                        {rentabilityType === "monthly" ? "Rentabilidade Efetiva ao Mês" : rentabilityType === "yearly" ? "Rentabilidade Efetiva Anual" : rentabilityType === "monthly-accumulated" ? "Rentabilidade Mensal Acumulada" : "Rentabilidade Total"} <ChevronDown className="size-4" />
+                        {rentabilityType === "monthly" ? "Rentabilidade ao Mês" : "Rentabilidade Total"} <ChevronDown className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => setRentabilityType("total")}>Rentabilidade Total</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setRentabilityType("monthly-accumulated")}>Rentabilidade Mensal Acumulada</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setRentabilityType("monthly")}>Rentabilidade Efetiva ao Mês</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setRentabilityType("yearly")}>Rentabilidade Efetiva Anual</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setRentabilityType("monthly")}>Rentabilidade ao Mês</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -498,7 +496,7 @@ export default function BondsPage() {
   );
 }
 
-function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "total" | "monthly-accumulated") {
+function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total") {
   return (
     bonds.map((bond) => (
       <Link href={`/profile/bonds/${bond.id}`} key={bond.id}>
@@ -539,20 +537,12 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "yearly" | "tot
             <div className="flex flex-col items-center justify-center">
               <Label className="text-xs text-muted-foreground">Rendimento</Label>
               <Label className="text-sm font-bold">
-                {formatCurrency(calculateBondTotals(bond).profit)}{""}
+                {formatCurrency(calculateBondTotals(bond).profit)}
                 <span className="text-xs text-muted-foreground">
                   (
                   {rentabilityType === "monthly"
-                    ? calculateBondTotals(bond).irrMonthly !== undefined
-                      ? formatPercentage(calculateBondTotals(bond).irrMonthly as number)
-                      : "Não é possível calcular"
-                    : rentabilityType === "yearly"
-                      ? calculateBondTotals(bond).irrAnnual !== undefined
-                        ? formatPercentage(calculateBondTotals(bond).irrAnnual as number)
-                        : "Não é possível calcular"
-                      : rentabilityType === "monthly-accumulated"
-                        ? formatPercentage(calculateBondTotals(bond).profitPercentageMonthly as number)
-                        : formatPercentage(calculateBondTotals(bond).profitPercentage / 100)}
+                    ? formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)
+                    : formatPercentage(calculateBondTotals(bond).profitPercentage)}
                   )
                 </span>
               </Label>
