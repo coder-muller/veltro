@@ -37,7 +37,7 @@ const addTransactionSchema = z.object({
 // Schema para editar um ativo
 const editBondSchema = z.object({
     name: z.string().min(1, { message: "Nome é obrigatório" }),
-    description: z.string().min(1, { message: "Descrição é obrigatória" }),
+    description: z.string().optional(),
     type: z.string().min(1, { message: "Tipo é obrigatório" }),
     walletId: z.string().min(1, { message: "Carteira é obrigatória" }),
 });
