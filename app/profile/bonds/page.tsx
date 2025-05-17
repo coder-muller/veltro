@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardHeader, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, Info, List, Loader2, MoreHorizontal, Plus, PlusCircle, Search, StretchHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/format";
@@ -27,6 +27,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, TooltipProps } from "recharts";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Schema para novo papel
 const newBondSchema = z.object({
@@ -69,6 +70,7 @@ export default function BondsPage() {
   const [rentabilityType, setRentabilityType] = useState<"monthly" | "total">("monthly");
   const [chartData, setChartData] = useState<{ byWallet: { name: string, value: number, color: string, type: string }[], byType: { name: string, value: number, color: string, type: string }[] }>({ byWallet: [], byType: [] });
   const [showOnlyActiveBonds, setShowOnlyActiveBonds] = useState<boolean>(true);
+  const [viewType, setViewType] = useState<"details" | "list">("details");
 
   // Busca os ativos quando o componente for montado
   useEffect(() => {
@@ -78,7 +80,7 @@ export default function BondsPage() {
 
   useEffect(() => {
     calculateTotals(bonds);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bonds, showOnlyActiveBonds]);
 
   // Função para buscar os ativos
@@ -352,7 +354,12 @@ export default function BondsPage() {
             {/* Assets Table */}
             <Card className="w-full md:col-span-2 h-max">
               <CardHeader className="w-full flex items-center justify-between">
-                <CardTitle>Ativos</CardTitle>
+                <Tabs value={viewType} onValueChange={(value) => setViewType(value as "details" | "list")} defaultValue="details">
+                  <TabsList>
+                    <TabsTrigger value="details"><StretchHorizontal /></TabsTrigger>
+                    <TabsTrigger value="list"><List /></TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -384,7 +391,8 @@ export default function BondsPage() {
                       .filter((bond) => bond.name.toLowerCase().includes(search.toLowerCase()) ||
                         bond.type.toLowerCase().includes(search.toLowerCase()))
                       .filter((bond) => showOnlyActiveBonds ? !calculateBondTotals(bond).isLiquidated : true),
-                    rentabilityType
+                    rentabilityType,
+                    viewType
                   )}
                 </div>
               </CardContent>
@@ -523,14 +531,88 @@ export default function BondsPage() {
   );
 }
 
-function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total") {
-  return (
-    bonds.map((bond) => {
-      const isLiquidated = calculateBondTotals(bond).isLiquidated;
+function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewType: "details" | "list") {
+  if (viewType === "details") {
+    return (
+      bonds.map((bond) => {
+        const isLiquidated = calculateBondTotals(bond).isLiquidated;
 
-      return (
-        <Link href={`/profile/bonds/${bond.id}`} key={bond.id}>
+        return (
+          <Link href={`/profile/bonds/${bond.id}`} key={bond.id}>
+            <div
+              className={`w-full flex flex-col items-center justify-center gap-2 ${isLiquidated ? 'bg-muted-foreground/5 opacity-75' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer`}
+            >
+              <div className="w-full flex items-center justify-between">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
+                  {isLiquidated && <span className="text-xs text-muted-foreground">(Liquidado)</span>}
+                </Label>
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  {formatCurrency(calculateBondTotals(bond).currentValue)}
+                </Label>
+              </div>
+              <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="flex flex-col items-center justify-center">
+                  <Label className="text-xs text-muted-foreground">Data de compra</Label>
+                  <Label className="text-sm font-bold">{new Date(bond.buyDate).toLocaleDateString('pt-BR')}</Label>
+                </div>
+                {!isLiquidated ? (
+                  <div className="flex flex-col items-center justify-center">
+                    <Label className="text-xs text-muted-foreground">Data de vencimento</Label>
+                    <Label className={`text-sm font-bold ${bond.expirationDate ?
+                      new Date(bond.expirationDate).getMonth() === new Date().getMonth() &&
+                        new Date(bond.expirationDate).getFullYear() === new Date().getFullYear() ?
+                        "text-orange-500" :
+                        new Date(bond.expirationDate) < new Date() ?
+                          "text-red-500" :
+                          ""
+                      : ""
+                      }`}>
+                      {bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}
+                    </Label>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center">
+                    <Label className="text-xs text-muted-foreground">Data de liquidação</Label>
+                    <Label className="text-sm font-bold">{new Date(bond.transactions[bond.transactions.length - 1].date).toLocaleDateString('pt-BR')}</Label>
+                  </div>
+                )}
+                <div className="flex flex-col items-center justify-center">
+                  <Label className="text-xs text-muted-foreground">Valor investido</Label>
+                  <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).totalInvested)}</Label>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <Label className="text-xs text-muted-foreground">Rendimento</Label>
+                  <Label className="text-sm font-bold">
+                    {formatCurrency(calculateBondTotals(bond).profit)}
+                    <span className="text-xs text-muted-foreground">
+                      (
+                      {rentabilityType === "monthly"
+                        ? formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)
+                        : formatPercentage(calculateBondTotals(bond).profitPercentage)}
+                      )
+                    </span>
+                  </Label>
+                </div>
+              </div>
+              {bond.description && (
+                <div className="w-full flex items-center justify-center mt-2">
+                  <Label className="text-xs text-muted-foreground">{bond.description}</Label>
+                </div>
+              )}
+            </div>
+          </Link>
+        );
+      })
+    );
+  } else {
+    return (
+      bonds.map((bond) => {
+        const isLiquidated = calculateBondTotals(bond).isLiquidated;
+
+        return (
           <div
+            key={bond.id}
             className={`w-full flex flex-col items-center justify-center gap-2 ${isLiquidated ? 'bg-muted-foreground/5 opacity-75' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer`}
           >
             <div className="w-full flex items-center justify-between">
@@ -538,62 +620,37 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total") {
                 {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
                 {isLiquidated && <span className="text-xs text-muted-foreground">(Liquidado)</span>}
               </Label>
-              <Label className="text-sm font-bold flex items-center gap-2">
+              <Label className="text-sm font-bold flex items-center">
                 {formatCurrency(calculateBondTotals(bond).currentValue)}
+                <span className="text-xs text-muted-foreground">
+                  (
+                  {rentabilityType === "monthly"
+                    ? formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)
+                    : formatPercentage(calculateBondTotals(bond).profitPercentage)}
+                  )
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="ml-2">
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>
+                      <PlusCircle /> Adicionar transação
+                    </DropdownMenuItem>
+                    <Link href={`/profile/bonds/${bond.id}`}>
+                      <DropdownMenuItem>
+                        <Info /> Detalhes
+                      </DropdownMenuItem>
+                    </Link>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Label>
             </div>
-            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="flex flex-col items-center justify-center">
-                <Label className="text-xs text-muted-foreground">Data de compra</Label>
-                <Label className="text-sm font-bold">{new Date(bond.buyDate).toLocaleDateString('pt-BR')}</Label>
-              </div>
-              {!isLiquidated ? (
-                <div className="flex flex-col items-center justify-center">
-                  <Label className="text-xs text-muted-foreground">Data de vencimento</Label>
-                  <Label className={`text-sm font-bold ${bond.expirationDate ?
-                    new Date(bond.expirationDate).getMonth() === new Date().getMonth() &&
-                      new Date(bond.expirationDate).getFullYear() === new Date().getFullYear() ?
-                      "text-orange-500" :
-                      new Date(bond.expirationDate) < new Date() ?
-                        "text-red-500" :
-                        ""
-                    : ""
-                    }`}>
-                    {bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : "N/A"}
-                  </Label>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center">
-                  <Label className="text-xs text-muted-foreground">Data de liquidação</Label>
-                  <Label className="text-sm font-bold">{new Date(bond.transactions[bond.transactions.length - 1].date).toLocaleDateString('pt-BR')}</Label>
-                </div>
-              )}
-              <div className="flex flex-col items-center justify-center">
-                <Label className="text-xs text-muted-foreground">Valor investido</Label>
-                <Label className="text-sm font-bold">{formatCurrency(calculateBondTotals(bond).totalInvested)}</Label>
-              </div>
-              <div className="flex flex-col items-center justify-center">
-                <Label className="text-xs text-muted-foreground">Rendimento</Label>
-                <Label className="text-sm font-bold">
-                  {formatCurrency(calculateBondTotals(bond).profit)}
-                  <span className="text-xs text-muted-foreground">
-                    (
-                    {rentabilityType === "monthly"
-                      ? formatPercentage(calculateBondTotals(bond).profitPercentageMonthly)
-                      : formatPercentage(calculateBondTotals(bond).profitPercentage)}
-                    )
-                  </span>
-                </Label>
-              </div>
-            </div>
-            {bond.description && (
-              <div className="w-full flex items-center justify-center mt-2">
-                <Label className="text-xs text-muted-foreground">{bond.description}</Label>
-              </div>
-            )}
-          </div>
-        </Link>
-      );
-    })
-  );
+          </div >
+        );
+      })
+    );
+  }
 }
