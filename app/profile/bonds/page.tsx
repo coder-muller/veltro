@@ -42,6 +42,15 @@ const newBondSchema = z.object({
   description: z.string().optional(),
 });
 
+// Schema para adicionar uma transação
+const addTransactionSchema = z.object({
+  date: z.string().min(1, { message: "A data é obrigatória" }),
+  type: z.string().min(1, { message: "O tipo de transação é obrigatório" }),
+  value: z.string().min(1, { message: "O valor é obrigatório" }).refine((value) => {
+    return !isNaN(Number(value.replace(",", ".")));
+  }, { message: "O valor deve ser um número" }),
+});
+
 export default function BondsPage() {
 
   // UseForm para o formulário de adição de ativos
@@ -58,12 +67,24 @@ export default function BondsPage() {
     },
   });
 
+  // UseForm para o formulário de adição de transação
+  const transactionForm = useForm<z.infer<typeof addTransactionSchema>>({
+    resolver: zodResolver(addTransactionSchema),
+    defaultValues: {
+      date: "",
+      type: "",
+      value: "",
+    },
+  });
+
   // Estados para o componente
   const [bonds, setBonds] = useState<Bond[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [search, setSearch] = useState("");
   const [chartType, setChartType] = useState("by-type");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+  const [selectedBondId, setSelectedBondId] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [totals, setTotals] = useState({ investedValue: 0, currentValue: 0, profit: 0 });
@@ -209,6 +230,41 @@ export default function BondsPage() {
       description: "",
     });
     setIsDialogOpen(true);
+  }
+
+  // Função para abrir o dialog de adição de transação
+  const openTransactionDialog = (bondId: string) => {
+    setSelectedBondId(bondId);
+    transactionForm.reset({
+      date: new Date().toISOString().split("T")[0],
+      type: "CORRECTION",
+      value: "",
+    });
+    setIsTransactionDialogOpen(true);
+  }
+
+  // Função para adicionar uma transação
+  const handleAddTransaction = async (data: z.infer<typeof addTransactionSchema>) => {
+    if (!selectedBondId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`/api/transactions/${selectedBondId}`, data);
+
+      if (response.status === 200) {
+        toast.success("Transação adicionada com sucesso");
+        fetchData();
+        setIsTransactionDialogOpen(false);
+        transactionForm.reset();
+      } else {
+        toast.error("Erro ao adicionar transação");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao adicionar transação");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   // Custom tooltip component for chart
@@ -392,7 +448,8 @@ export default function BondsPage() {
                         bond.type.toLowerCase().includes(search.toLowerCase()))
                       .filter((bond) => showOnlyActiveBonds ? !calculateBondTotals(bond).isLiquidated : true),
                     rentabilityType,
-                    viewType
+                    viewType,
+                    openTransactionDialog
                   )}
                 </div>
               </CardContent>
@@ -524,6 +581,79 @@ export default function BondsPage() {
               </Form>
             </DialogContent>
           </Dialog >
+
+          {/* Dialog de adição de transação */}
+          <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
+            <DialogContent className="min-w-xl">
+              <DialogHeader>
+                <DialogTitle>Adicionar Transação</DialogTitle>
+                <DialogDescription>Adicione uma nova transação ao ativo selecionado.</DialogDescription>
+              </DialogHeader>
+              <Form {...transactionForm}>
+                <form onSubmit={transactionForm.handleSubmit(handleAddTransaction)}>
+                  <div className="grid grid-cols-3 gap-2">
+                    <FormField
+                      control={transactionForm.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Digite a data da transação" type="date" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={transactionForm.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione o tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CORRECTION">Correção</SelectItem>
+                                <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                                <SelectItem value="RESCUE">Resgate</SelectItem>
+                                <SelectItem value="LIQUIDATION">Liquidação</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={transactionForm.control}
+                      name="value"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Valor" disabled={isLoading} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <DialogFooter className="mt-4">
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Adicionar"}
+                    </Button>
+                    <DialogClose asChild>
+                      <Button type="reset" variant="outline">Cancelar</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog >
         </>
       )
       }
@@ -531,7 +661,7 @@ export default function BondsPage() {
   );
 }
 
-function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewType: "details" | "list") {
+function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewType: "details" | "list", openTransactionDialog: (bondId: string) => void) {
   if (viewType === "details") {
     return (
       bonds.map((bond) => {
@@ -613,11 +743,11 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewTy
         return (
           <div
             key={bond.id}
-            className={`w-full flex flex-col items-center justify-center gap-2 ${isLiquidated ? 'bg-muted-foreground/5 opacity-75' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300 cursor-pointer`}
+            className={`w-full flex flex-col items-center justify-center gap-2 ${isLiquidated ? 'bg-muted-foreground/10 opacity-60' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300`}
           >
             <div className="w-full flex items-center justify-between">
               <Label className="text-sm font-bold flex items-center gap-2">
-                {bond.name}{<span className="text-xs text-muted-foreground hidden md:block">{bond.type}</span>}
+                {bond.name}{!isLiquidated && <span className="text-xs text-muted-foreground hidden md:block">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : bond.type}</span>}
                 {isLiquidated && <span className="text-xs text-muted-foreground">(Liquidado)</span>}
               </Label>
               <Label className="text-sm font-bold flex items-center">
@@ -636,12 +766,12 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewTy
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <PlusCircle /> Adicionar transação
+                    <DropdownMenuItem onClick={() => openTransactionDialog(bond.id)} disabled={isLiquidated}>
+                      <PlusCircle className="h-4 w-4" /> Adicionar transação
                     </DropdownMenuItem>
                     <Link href={`/profile/bonds/${bond.id}`}>
                       <DropdownMenuItem>
-                        <Info /> Detalhes
+                        <Info className="h-4 w-4" /> Detalhes
                       </DropdownMenuItem>
                     </Link>
                   </DropdownMenuContent>
