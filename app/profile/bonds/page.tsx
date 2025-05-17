@@ -745,9 +745,9 @@ function renderBonds(bonds: Bond[], rentabilityType: "monthly" | "total", viewTy
             key={bond.id}
             className={`w-full flex flex-col items-center justify-center gap-2 ${isLiquidated ? 'bg-muted-foreground/10 opacity-60' : 'bg-muted'} rounded-lg px-4 md:px-8 py-2 md:py-4 shadow-sm border border-border hover:bg-muted-foreground/10 transition-all duration-300`}
           >
-            <div className="w-full flex items-center justify-between">
+            <div className="w-full flex flex-col md:flex-row items-center justify-between">
               <Label className="text-sm font-bold flex items-center gap-2">
-                {bond.name}{!isLiquidated && <span className="text-xs text-muted-foreground hidden md:block">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : bond.type}</span>}
+                {bond.name}{!isLiquidated && <span className="text-xs text-muted-foreground">{bond.expirationDate ? new Date(bond.expirationDate).toLocaleDateString('pt-BR') : bond.type}</span>}
                 {isLiquidated && <span className="text-xs text-muted-foreground">(Liquidado)</span>}
               </Label>
               <Label className="text-sm font-bold flex items-center">
